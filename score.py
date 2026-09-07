@@ -48,12 +48,49 @@ CRITICALITY = {
     "storage":  1.0,
     "memory":   1.0,
     "psu":      0.8,
+    "cooling":  0.8,
+    "other":    0.9,
 }
+# Anything not listed defaults to 1.0 - see DECISIONS.md.
+DEFAULT_CRITICALITY = 1.0
 
 REQUIRED_BOM_COLUMNS = [
     "component_id", "component_name", "category", "vendor",
-    "model", "version", "country_of_origin", "quantity",
+    "model", "version", "country_of_origin", "quantity", "end_of_life",
 ]
+
+# A component is UNVERIFIABLE (not "safe") when its identity cannot be
+# established. These are the values that mean "we do not know".
+UNKNOWN_VALUES = {"unknown", "", "n/a", "none"}
+
+
+def compare_versions(a, b):
+    """Return -1, 0 or 1 comparing two dotted version strings.
+
+    This is the fiddliest function in the file - build it early and test it
+    on its own before wiring it into match_cves().
+
+    Hint: split on ".", convert each part to int where possible, pad the
+    shorter one with zeros, then compare the resulting tuples.
+        "6.10.80.00"  ->  (6, 10, 80, 0)
+        "7.00.00.172" ->  (7, 0, 0, 172)
+    Non-numeric versions ("Rev B", "unknown") cannot be compared - return
+    None and let the caller mark the component UNVERIFIABLE.
+    """
+    # TODO
+    raise NotImplementedError
+
+
+def in_affected_range(version, range_string):
+    """Does `version` fall inside a range like ">=12.0 <12.4" or "<3.39.30"?
+
+    Ranges in data/cve_dataset.csv use these operators only:
+        >=  >  <=  <
+    Space separated, e.g.  ">=3.0 <=11.22.70"
+    A range of "unspecified" can never match - return False.
+    """
+    # TODO
+    raise NotImplementedError
 
 
 def load_bom(path):

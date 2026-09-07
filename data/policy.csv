@@ -1,1 +1,14 @@
 rule_type,key,risk_tier,action,justification
+vendor,Meridian Component Works,restricted,block,EXAMPLE ENTRY - vendor failed the supplier security assessment; procurement blocked pending re-audit
+vendor,Generic,review,flag,Unidentified supplier - provenance cannot be established
+vendor,Unbranded,review,flag,Unidentified supplier - provenance cannot be established
+country,US,1,allow,ILLUSTRATIVE - supply chain audit completed
+country,TW,1,allow,ILLUSTRATIVE - supply chain audit completed
+country,KR,1,allow,ILLUSTRATIVE - supply chain audit completed
+country,JP,1,allow,ILLUSTRATIVE - supply chain audit completed
+country,DE,1,allow,ILLUSTRATIVE - supply chain audit completed
+country,IL,1,allow,ILLUSTRATIVE - supply chain audit completed
+country,SG,2,flag,ILLUSTRATIVE - supplier audit in progress
+country,MY,2,flag,ILLUSTRATIVE - supplier audit in progress
+country,CN,2,flag,ILLUSTRATIVE - supplier audit in progress
+country,unknown,3,flag,Country of origin not declared - provenance cannot be verified

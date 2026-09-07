@@ -77,6 +77,45 @@ readable string (e.g. `>=12.0 <12.4`). Where a product has several
 generation-specific ranges they are combined into one field (e.g. Dell iDRAC9).
 A deliberate simplification for readability; comparison remains version-based.
 
+## Component matching approach
+
+Components are matched to CVEs on **vendor + model** (exact, case-insensitive)
+followed by a **version range check**. Production tools match on CPE strings.
+CPE matching was out of scope for the timeframe; the simplification is recorded
+here rather than hidden, and the matching logic is otherwise identical in shape.
+
+## Two different kinds of "no result"
+
+These must not be conflated, and the distinction is the heart of the unknown-case
+requirement:
+
+| Case | Meaning | How it is scored |
+|---|---|---|
+| Component identified, no CVE found | Genuinely no *known* vulnerability | Low vulnerability score, marked VERIFIED |
+| Vendor or version cannot be established | We do not know what this part is | **UNVERIFIABLE** - surfaced, never scored as safe |
+
+The demo BOM contains 6 components of the second kind (unbranded backplanes,
+cable harnesses, rail kits), giving **82% coverage**. A scanner that silently
+treats those as clean would report this rack as safer than it is.
+
+## Country tiering is illustrative and organisation-supplied
+
+`policy.csv` ships with placeholder tiers keyed to a supplier-audit status, not
+to any geopolitical assessment. The tool is **policy-driven**: a procurement
+office supplies its own restricted-vendor list and country tiering. This is both
+better engineering and keeps the team out of claims it cannot defend.
+
+**ACTION: confirm the real tiering basis with Dr. Zheeshan before submission.**
+
+The restricted vendor in the demo BOM ("Meridian Component Works") is fictional,
+so no real supplier is characterised.
+
+## BOM schema
+
+`end_of_life` (yes/no/unknown) was added to the BOM so that dimension 3 has a
+lifecycle signal. Single-source dependency is derived from the BOM itself by
+counting distinct vendors per category - it needs no extra input data.
+
 ## Open questions
 
 - [ ] Confirm with organisers: is AI assistance permitted for the build, and must it be disclosed?
@@ -89,3 +128,6 @@ A deliberate simplification for readability; comparison remains version-based.
 | Date | Who | Decision | Why |
 |---|---|---|---|
 | 2026-09-07 | Team | CSV ingestion rather than CycloneDX/SPDX | Explicitly permitted by the brief; parsing effort earns no extra marks. |
+| 2026-09-07 | Team | NVD score used over CNA score throughout | Comparability across the dataset. |
+| 2026-09-07 | Team | Match on vendor + model, not CPE | CPE matching out of scope for a 4-day build. |
+| 2026-09-07 | Team | Added `end_of_life` column to the BOM | Dimension 3 needs a lifecycle signal a procurement BOM would realistically carry. |
