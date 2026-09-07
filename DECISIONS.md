@@ -38,6 +38,45 @@ failure mode the brief warns about.
 The output is a **prioritisation index** for ranking components. It is not a
 probability of compromise and must never be described as one.
 
+## CVSS source selection
+
+The **NVD (NIST) base score** is used for every entry, so scores are comparable
+across the dataset. Where NVD has not scored a CVE, the CNA score is used and
+flagged in the `score_source` column.
+
+This matters more than it sounds. Vendor and NVD assessments differ materially,
+in both directions:
+
+| CVE | NVD | Vendor (CNA) | Why they differ |
+|---|---|---|---|
+| CVE-2023-34329 | 8.0 HIGH | 9.1 CRITICAL (AMI) | Attack vector: NVD assessed adjacent-network, AMI assessed network |
+| CVE-2024-25943 | **9.8 CRITICAL** | 7.6 HIGH (Dell) | NVD assessed no privileges and no user interaction required |
+
+Mixing sources within one dataset would make the scores non-comparable and the
+ranking meaningless.
+
+## The unknown case - CVE-2024-8105 (PKfail)
+
+PKfail is a genuine firmware supply-chain vulnerability: a hard-coded UEFI
+Platform Key means anyone holding the private key can sign firmware that
+affected systems will trust. It is precisely the risk this brief describes,
+entering through a component long before an attacker touches the network.
+
+**NVD holds no CVSS base score, no CWE, and no affected-product configuration
+for it.** An automated matcher therefore cannot match it to a component by
+vendor and version.
+
+This is not a gap in our tool - it is the case the brief asks us to handle. A
+scanner that silently scores unmatched components as safe would report an
+affected server as clean. Ours surfaces it as UNVERIFIED and reports coverage.
+
+## Version range simplification
+
+NVD expresses affected versions as CPE range objects. These are flattened to a
+readable string (e.g. `>=12.0 <12.4`). Where a product has several
+generation-specific ranges they are combined into one field (e.g. Dell iDRAC9).
+A deliberate simplification for readability; comparison remains version-based.
+
 ## Open questions
 
 - [ ] Confirm with organisers: is AI assistance permitted for the build, and must it be disclosed?
