@@ -1,1 +1,6 @@
-vendor,product,version_affected,cve_id,cvss_score,severity,description,fix_available
+vendor,product,version_affected,cve_id,cvss_score,score_source,severity,cwe,description,fix_available
+AMI,MegaRAC SPx12,>=12.0 <12.4,CVE-2023-34329,8.0,NVD,HIGH,CWE-290,Authentication bypass in the BMC via HTTP header spoofing,yes
+Dell,iDRAC9,<7.00.00.172 (14G) / <7.10.50.00 (15G-16G),CVE-2024-25943,9.8,NVD,CRITICAL,CWE-330,Session hijacking in IPMI allowing remote arbitrary code execution,yes
+NVIDIA,DGX-1 BMC,<3.39.30,CVE-2023-25505,7.8,NVD,HIGH,CWE-120,Buffer overflow in the IPMI handler of the AMI MegaRAC BMC,yes
+Intel,Active Management Technology Firmware,>=3.0 <=11.22.70,CVE-2018-3628,8.8,NVD,HIGH,CWE-119,Buffer overflow in the AMT HTTP handler allowing code execution from the same subnet,yes
+multiple,UEFI implementations using a hard-coded Platform Key,unspecified,CVE-2024-8105,6.4,CNA,MEDIUM,not listed,Hard-coded UEFI Platform Key lets an attacker sign firmware that affected systems will trust,partial
