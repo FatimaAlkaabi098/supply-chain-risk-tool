@@ -94,6 +94,17 @@ DEFAULT_MITIGATION = ("Apply the vendor's fixed version. If no fix exists, isola
                       "on a segregated management network and evaluate an alternative supplier.")
 
 
+# Default input paths resolve relative to THIS FILE, not to the shell's current
+# directory, so the tool runs correctly however it is launched - from the
+# project folder, from an IDE Run button, or from anywhere else. A path given
+# explicitly on the command line is still resolved normally.
+HERE = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_BOM    = os.path.join(HERE, "data", "demo_bom.csv")
+DEFAULT_CVES   = os.path.join(HERE, "data", "cve_dataset.csv")
+DEFAULT_POLICY = os.path.join(HERE, "data", "policy.csv")
+DEFAULT_OUT    = os.path.join(HERE, "reports", "report.html")
+
+
 class DataError(Exception):
     """Raised when an input file cannot be used. Always explains why."""
 
@@ -595,10 +606,10 @@ def write_report(scored, summary, out_path, sources):
 def main():
     parser = argparse.ArgumentParser(
         description="Score an AI server bill of materials for supply-chain risk.")
-    parser.add_argument("--bom", default="data/demo_bom.csv")
-    parser.add_argument("--cves", default="data/cve_dataset.csv")
-    parser.add_argument("--policy", default="data/policy.csv")
-    parser.add_argument("--out", default="reports/report.html")
+    parser.add_argument("--bom", default=DEFAULT_BOM)
+    parser.add_argument("--cves", default=DEFAULT_CVES)
+    parser.add_argument("--policy", default=DEFAULT_POLICY)
+    parser.add_argument("--out", default=DEFAULT_OUT)
     args = parser.parse_args()
 
     try:

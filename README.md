@@ -27,6 +27,10 @@ python score.py
 
 Then open `reports/report.html`.
 
+The tool resolves its default data files relative to `score.py` itself, so it
+runs correctly from any working directory - the project folder, an IDE Run
+button, or anywhere else.
+
 To use your own files:
 
 ```

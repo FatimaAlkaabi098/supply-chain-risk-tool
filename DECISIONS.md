@@ -116,6 +116,15 @@ so no real supplier is characterised.
 lifecycle signal. Single-source dependency is derived from the BOM itself by
 counting distinct vendors per category - it needs no extra input data.
 
+## Default paths are script-relative
+
+Default input paths resolve against the location of `score.py`, not the shell's
+current working directory. Found during testing: an IDE Run button launches the
+interpreter from the IDE's own install folder, so relative default paths failed.
+The jury runs this from a README on an unknown machine, so the tool must not
+assume a working directory. Paths passed explicitly on the command line still
+resolve normally.
+
 ## Open questions
 
 - [ ] Confirm with organisers: is AI assistance permitted for the build, and must it be disclosed?
