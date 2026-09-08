@@ -151,6 +151,48 @@ notation as 12.7 and recorded the range as `>=12.0 <12.7`. This is an
 interpretation of the vendor's own notation, recorded here rather than applied
 silently.
 
+## Remediation simulator
+
+Scoring a BOM tells procurement what is wrong. It does not tell them what to do,
+or what it would buy them. The simulator answers the question a buyer actually
+asks: **what is the smallest set of changes that makes this purchase acceptable?**
+
+Four action types are derived automatically from the findings:
+
+| Action | Derived from | Modelled as |
+|---|---|---|
+| PATCH | A matched CVE with a published fix | Version raised to the first fixed version, computed from the affected range |
+| REPLACE | A vendor blocked by policy | Re-sourced from an approved supplier already present in the BOM for that category |
+| REFRESH | End-of-life status | Replaced with a supported generation |
+| IDENTIFY | Unverifiable provenance | The missing fields only are supplied |
+
+### Why the plan is ranked by distance, not by points
+
+The verdict is decided by three rules - a blocking vendor, any CRITICAL
+component, and coverage below 90%. Ranking actions by points saved produced a
+10-step plan full of changes that lowered the number without moving the
+decision. Ranking by **distance to the approval conditions** produces a 6-step
+plan where every step clears one condition. Points are only a tie-breaker.
+
+On the demo BOM: 1 REPLACE clears the blocking vendor, 2 PATCH clear the two
+CRITICAL components, and 3 IDENTIFY raise coverage from 82% to 91%.
+
+### Honesty about what is modelled
+
+PATCH and REPLACE are modelled exactly - the resulting component is rescored
+through the same pipeline. **IDENTIFY models the best case**: that the supplier
+provides provenance and the part proves to have no known vulnerability. If
+provenance instead reveals a vulnerable part, the score will not improve by the
+amount shown. This is stated in the report itself rather than left implicit.
+
+### Bug found and fixed during testing
+
+The first version of IDENTIFY overwrote the vendor field unconditionally. On a
+component that was both from a blocked vendor and missing a version, obtaining
+the version silently cleared the policy block and flipped REJECT to APPROVE.
+IDENTIFY now fills in **only the fields that are actually missing**. Knowing a
+part's version does not make its supplier acceptable.
+
 ## Open questions
 
 - [ ] Confirm with organisers: is AI assistance permitted for the build, and must it be disclosed?

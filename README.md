@@ -88,6 +88,25 @@ Two things beyond per-component scoring:
   established are reported as **UNVERIFIABLE** and carry a defined uncertainty
   penalty. They are never silently scored as safe.
 
+### Remediation simulator
+
+The report does not stop at what is wrong. It computes **the smallest set of
+changes that makes the purchase acceptable**, and shows the score and verdict
+after each step:
+
+```
+  6 action(s) take this BOM from REJECT (29.7) to APPROVE (22.8)
+    1. [REPLACE ] Re-source Dual-port 25GbE NIC from Broadcom      -> 28.5  APPROVE WITH CONDITIONS
+    2. [PATCH   ] Update Dell iDRAC9 to 7.00.00.182                -> 26.1  APPROVE WITH CONDITIONS
+    3. [PATCH   ] Update Intel AMT Firmware to 11.22.71            -> 24.1  APPROVE WITH CONDITIONS
+    4. [IDENTIFY] Obtain version, origin for Rear I/O backplane    -> 23.6  APPROVE WITH CONDITIONS
+    5. [IDENTIFY] Obtain version for GPU power cable harness       -> 23.2  APPROVE WITH CONDITIONS
+    6. [IDENTIFY] Obtain version, origin for Rack mounting rails   -> 22.8  APPROVE
+```
+
+Actions are ranked by **distance to the approval conditions**, not by points
+saved - so every step clears a real blocker. Disable with `--no-simulate`.
+
 The verdict is rule-based, not a threshold on a single number:
 
 | Verdict | When |
@@ -105,6 +124,7 @@ Tested and passing:
 - Missing required columns → names exactly which are missing
 - Junk values, duplicate IDs, blank rows, non-numeric quantities → warns and continues
 - Unicode and quoted fields handled
+- Full run including the simulator completes in under one second
 
 ## Limitations
 

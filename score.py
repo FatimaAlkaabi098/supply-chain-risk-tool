@@ -243,6 +243,35 @@ def in_affected_range(version, range_string):
     return True
 
 
+def first_fixed_version(range_string):
+    """The lowest version NOT covered by an affected range, where determinable.
+
+        '<7.00.00.182'      -> '7.00.00.182'   (the bound itself is fixed)
+        '>=12.0 <12.7'      -> '12.7'
+        '>=3.0 <=11.22.70'  -> '11.22.71'      (bump past an inclusive bound)
+
+    Returns None when the range does not state an upper bound, which is why
+    'unspecified' entries can never be remediated by patching.
+    """
+    if not range_string:
+        return None
+    tokens = range_string.split()
+    for token in tokens:
+        match = re.match(r"^<(?!=)(.+)$", token)
+        if match:
+            return match.group(1)
+    for token in tokens:
+        match = re.match(r"^<=(.+)$", token)
+        if match:
+            parts = match.group(1).split(".")
+            try:
+                parts[-1] = str(int(parts[-1]) + 1)
+            except ValueError:
+                return None
+            return ".".join(parts)
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Dimension 1 - known vulnerabilities
 # ---------------------------------------------------------------------------
@@ -484,6 +513,180 @@ def score_bom(scored, bom):
 
 
 # ---------------------------------------------------------------------------
+# Remediation simulator
+#
+# Scoring a BOM tells procurement what is wrong. It does not tell them what to
+# do about it, or what it would buy them. The simulator answers the question a
+# buyer actually asks: what is the smallest set of changes that makes this
+# purchase acceptable?
+# ---------------------------------------------------------------------------
+EFFORT_ORDER = {"low": 0, "medium": 1, "high": 2}
+VERDICT_RANK = {"REJECT": 0, "APPROVE WITH CONDITIONS": 1, "APPROVE": 2}
+
+
+def verdict_distance(summary):
+    """How far this BOM is from APPROVE, as the three conditions that decide it.
+
+    Compared lexicographically, lower is better: clear the blocking vendors
+    first, then the CRITICAL components, then the coverage shortfall.
+    (0, 0, 0.0) means the BOM meets every approval condition.
+    """
+    return (len(summary["blocked"]),
+            len(summary["criticals"]),
+            round(max(0.0, 0.90 - summary["coverage"]), 4))
+
+
+def score_all(bom, cve_data, policy):
+    """Full pipeline. Used for the baseline and for every simulated variant."""
+    single_source = find_single_source_categories(bom)
+    scored = [score_component(c, cve_data, policy, bom, single_source) for c in bom]
+    return scored, score_bom(scored, bom)
+
+
+def build_remediation_actions(scored, bom, policy):
+    """Derive candidate fixes from the findings themselves."""
+    actions = []
+    for result in scored:
+        component = result["component"]
+        cid = component["component_id"]
+
+        # 1. PATCH - a fixed version exists for every matched CVE
+        fixed_targets = []
+        for cve in result["cves"]:
+            if not cve["fix_available"].lower().startswith("y"):
+                continue
+            target = first_fixed_version(cve["version_affected"])
+            if target:
+                fixed_targets.append(target)
+        if fixed_targets:
+            highest = fixed_targets[0]
+            for candidate in fixed_targets[1:]:
+                if (compare_versions(candidate, highest) or 0) > 0:
+                    highest = candidate
+            actions.append({
+                "type": "PATCH", "component_id": cid, "effort": "low",
+                "label": f"Update {component['vendor']} {component['model']} to {highest}",
+                "detail": "Resolves " + ", ".join(c["cve_id"] for c in result["cves"]),
+                "change": {"version": highest},
+            })
+
+        # 2. REPLACE VENDOR - blocked by policy, substitute an approved supplier
+        if result["blocking"]:
+            alternatives = [
+                c for c in bom
+                if c["category"] == component["category"]
+                and c["vendor"] != component["vendor"]
+                and c["vendor"].lower() not in policy["vendors"]
+            ]
+            if alternatives:
+                pick = sorted(alternatives, key=lambda c: c["vendor"])[0]
+                actions.append({
+                    "type": "REPLACE", "component_id": cid, "effort": "high",
+                    "label": f"Re-source {component['component_name']} from {pick['vendor']}",
+                    "detail": f"{component['vendor']} is blocked by procurement policy",
+                    "change": {"vendor": pick["vendor"], "model": pick["model"],
+                               "version": pick["version"],
+                               "country_of_origin": pick["country_of_origin"]},
+                })
+
+        # 3. REFRESH - end of life, replace with a supported generation
+        if component["end_of_life"].lower() == "yes":
+            actions.append({
+                "type": "REFRESH", "component_id": cid, "effort": "high",
+                "label": f"Replace end-of-life {component['component_name']} with a supported generation",
+                "detail": "Receives no further security updates in its current form",
+                "change": {"end_of_life": "no"},
+            })
+
+        # 4. IDENTIFY - obtain provenance from the supplier.
+        # Only fills in what is actually missing. Overwriting a field that is
+        # already known would silently discard a real finding: a component can
+        # be from a blocked vendor AND have no declared version, and obtaining
+        # the version does not make the vendor acceptable.
+        if result["status"] == "UNVERIFIED":
+            change, missing = {}, []
+            if component["vendor"].lower() in UNKNOWN_VALUES:
+                change["vendor"] = "(declared by supplier)"
+                missing.append("vendor")
+            if component["model"].lower() in UNKNOWN_VALUES:
+                change["model"] = component["component_name"]
+                missing.append("model")
+            if component["version"].lower() in UNKNOWN_VALUES:
+                change["version"] = "1.0"
+                missing.append("version")
+            if component["country_of_origin"].lower() in UNKNOWN_VALUES:
+                change["country_of_origin"] = "(declared by supplier)"
+                missing.append("country of origin")
+            if change:
+                actions.append({
+                    "type": "IDENTIFY", "component_id": cid, "effort": "low",
+                    "label": f"Obtain {', '.join(missing)} for {component['component_name']} from the supplier",
+                    "detail": "Provenance cannot currently be established",
+                    "change": change,
+                })
+    return actions
+
+
+def apply_actions(bom, actions):
+    """Return a copy of the BOM with the given actions applied."""
+    changes = {}
+    for action in actions:
+        changes.setdefault(action["component_id"], {}).update(action["change"])
+    return [dict(c, **changes.get(c["component_id"], {})) for c in bom]
+
+
+def remediation_plan(bom, cve_data, policy, baseline_scored, baseline_summary):
+    """Independent impact of each action, then the smallest plan reaching APPROVE."""
+    candidates = build_remediation_actions(baseline_scored, bom, policy)
+    baseline = baseline_summary["overall"]
+
+    # Independent impact: what does this one action save on its own?
+    for action in candidates:
+        _, trial = score_all(apply_actions(bom, [action]), cve_data, policy)
+        action["saving"] = baseline - trial["overall"]
+        action["unblocks"] = trial["verdict"] != baseline_summary["verdict"]
+
+    # Goal-directed greedy, not greedy-on-score.
+    #
+    # The verdict is decided by three rules - a blocking vendor, any CRITICAL
+    # component, and coverage below 90% - so the smallest useful plan is the one
+    # that clears those conditions. Ranking by points saved produces a longer
+    # plan full of actions that lower the number without moving the decision.
+    # We therefore rank by DISTANCE to the approval conditions, and only take an
+    # action if it actually shortens that distance. Ties break on score saved,
+    # then on lower effort.
+    remaining = list(candidates)
+    applied, steps = [], []
+    current = baseline_summary
+    while remaining and current["verdict"] != "APPROVE":
+        here = verdict_distance(current)
+        best = None
+        for action in remaining:
+            _, trial = score_all(apply_actions(bom, applied + [action]), cve_data, policy)
+            key = (verdict_distance(trial), trial["overall"], EFFORT_ORDER[action["effort"]])
+            if best is None or key < best[0]:
+                best = (key, action, trial)
+        (distance, _, _), action, trial = best
+        if distance >= here:          # nothing left moves the decision along
+            break
+        applied.append(action)
+        remaining.remove(action)
+        current = trial
+        steps.append({"action": action, "score": current["overall"],
+                      "verdict": current["verdict"], "coverage": current["coverage"]})
+
+    return {
+        "candidates": sorted(candidates, key=lambda a: (-a["saving"], a["component_id"])),
+        "steps": steps,
+        "baseline_score": baseline,
+        "baseline_verdict": baseline_summary["verdict"],
+        "final_score": current["overall"],
+        "final_verdict": current["verdict"],
+        "reached_approve": current["verdict"] == "APPROVE",
+    }
+
+
+# ---------------------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------------------
 CSS = """
@@ -515,7 +718,51 @@ def _e(text):
     return html.escape(str(text))
 
 
-def write_report(scored, summary, out_path, sources):
+def _remediation_section(plan):
+    p = ["<h2>Remediation plan</h2>"]
+    if plan["reached_approve"]:
+        p.append(f"<p class='sub'>{len(plan['steps'])} action(s) take this bill of materials from "
+                 f"<b>{_e(plan['baseline_verdict'])}</b> at {plan['baseline_score']:.1f} to "
+                 f"<b>APPROVE</b> at {plan['final_score']:.1f}.</p>")
+    else:
+        p.append(f"<p class='sub'>No combination of the available actions reaches APPROVE. "
+                 f"Best achievable: <b>{_e(plan['final_verdict'])}</b> at "
+                 f"{plan['final_score']:.1f}, down from {plan['baseline_score']:.1f}.</p>")
+
+    if plan["steps"]:
+        p.append("<table><tr><th>Step</th><th>Action</th><th>Component</th>"
+                 "<th>Effort</th><th>Score after</th><th>Verdict after</th></tr>")
+        for i, step in enumerate(plan["steps"], 1):
+            a = step["action"]
+            p.append(f"<tr><td class='mono'>{i}</td>"
+                     f"<td><span class='badge b-LOW'>{_e(a['type'])}</span> {_e(a['label'])}<br>"
+                     f"<span class='mono'>{_e(a['detail'])}</span></td>"
+                     f"<td class='mono'>{_e(a['component_id'])}</td>"
+                     f"<td class='mono'>{_e(a['effort'])}</td>"
+                     f"<td class='mono'>{step['score']:.1f}</td>"
+                     f"<td class='mono'>{_e(step['verdict'])}</td></tr>")
+        p.append("</table>")
+
+    others = [a for a in plan["candidates"] if a not in [s["action"] for s in plan["steps"]]]
+    if others:
+        p.append("<h2>Other available actions, by individual impact</h2>")
+        p.append("<p class='sub'>Each figure is the reduction that action delivers on its own, "
+                 "measured against the unremediated baseline.</p>")
+        p.append("<table><tr><th>Saving</th><th>Action</th><th>Component</th><th>Effort</th></tr>")
+        for a in others[:12]:
+            p.append(f"<tr><td class='mono'>-{a['saving']:.1f}</td>"
+                     f"<td>{_e(a['label'])}</td><td class='mono'>{_e(a['component_id'])}</td>"
+                     f"<td class='mono'>{_e(a['effort'])}</td></tr>")
+        p.append("</table>")
+
+    p.append("<div class='note'>The IDENTIFY action models the best case: that the supplier "
+             "provides provenance and the component proves to have no known vulnerability. "
+             "If provenance instead reveals a vulnerable part, the score will not improve by "
+             "the amount shown. Patching and re-sourcing are modelled exactly.</div>")
+    return p
+
+
+def write_report(scored, summary, out_path, sources, plan=None):
     ranked = sorted(scored, key=lambda r: (-r["score"], -r["base"], r["component"]["component_id"]))
     findings = [r for r in ranked if r["score"] > 0]
     unverified = sorted(summary["unverified"], key=lambda r: r["component"]["component_id"])
@@ -590,6 +837,9 @@ def write_report(scored, summary, out_path, sources):
     else:
         p.append("<p>All components were identifiable.</p>")
 
+    if plan:
+        p.extend(_remediation_section(plan))
+
     p.append("<h2>Method</h2><table>"
              "<tr><th>Dimension</th><th>Weight</th><th>Source</th></tr>"
              f"<tr><td>Known vulnerabilities</td><td>{W_VULNERABILITY}</td>"
@@ -617,6 +867,8 @@ def main():
     parser.add_argument("--cves", default=DEFAULT_CVES)
     parser.add_argument("--policy", default=DEFAULT_POLICY)
     parser.add_argument("--out", default=DEFAULT_OUT)
+    parser.add_argument("--no-simulate", action="store_true",
+                        help="skip the remediation simulator")
     args = parser.parse_args()
 
     try:
@@ -630,11 +882,10 @@ def main():
     for message in notes:
         print(f"  warning: {message}")
 
-    single_source = find_single_source_categories(bom)
-    scored = [score_component(c, cve_data, policy, bom, single_source) for c in bom]
-    summary = score_bom(scored, bom)
+    scored, summary = score_all(bom, cve_data, policy)
+    plan = None if args.no_simulate else remediation_plan(bom, cve_data, policy, scored, summary)
     write_report(scored, summary, args.out,
-                 {"bom": args.bom, "cves": args.cves, "policy": args.policy})
+                 {"bom": args.bom, "cves": args.cves, "policy": args.policy}, plan)
 
     print(f"\n  Components assessed : {summary['total']}")
     print(f"  Overall BOM risk    : {summary['overall']:.1f}/100")
@@ -646,6 +897,20 @@ def main():
         cves = ", ".join(c["cve_id"] for c in r["cves"]) or "-"
         print(f"    {r['score']:5.1f}  {r['band']:<8} {r['component']['component_id']}  "
               f"{r['component']['vendor']} {r['component']['model']}  {cves}")
+
+    if plan:
+        print(f"\n  REMEDIATION PLAN")
+        if plan["reached_approve"]:
+            print(f"  {len(plan['steps'])} action(s) take this BOM from {plan['baseline_verdict']} "
+                  f"({plan['baseline_score']:.1f}) to APPROVE ({plan['final_score']:.1f})")
+        else:
+            print(f"  Best achievable is {plan['final_verdict']} ({plan['final_score']:.1f}), "
+                  f"down from {plan['baseline_score']:.1f}")
+        for i, step in enumerate(plan["steps"], 1):
+            a = step["action"]
+            print(f"    {i}. [{a['type']:<8}] {a['label']}")
+            print(f"       -> {step['score']:.1f}  {step['verdict']}")
+
     print(f"\n  Report written to {args.out}\n")
     return 0
 
