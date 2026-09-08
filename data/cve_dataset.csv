@@ -4,3 +4,11 @@ Dell,iDRAC9,<7.00.00.172,CVE-2024-25943,9.8,NVD,CRITICAL,CWE-330,Session hijacki
 NVIDIA,DGX-1 BMC,<3.39.30,CVE-2023-25505,7.8,NVD,HIGH,CWE-120,Buffer overflow in the IPMI handler of the AMI MegaRAC BMC,yes
 Intel,Active Management Technology Firmware,>=3.0 <=11.22.70,CVE-2018-3628,8.8,NVD,HIGH,CWE-119,Buffer overflow in the AMT HTTP handler allowing code execution from the same subnet,yes
 multiple,UEFI implementations using a hard-coded Platform Key,unspecified,CVE-2024-8105,6.4,CNA,MEDIUM,not listed,Hard-coded UEFI Platform Key lets an attacker sign firmware that affected systems will trust,partial
+AMI,MegaRAC SPx12,>=12.0 <12.7,CVE-2023-25191,7.5,NVD,HIGH,CWE-522,Password disclosure through the Redfish interface (fixed in SPx_12-update-7.00),yes
+Dell,iDRAC9,<7.00.00.182,CVE-2026-79940,5.9,CNA,MEDIUM,CWE-284,Improper access control allowing an unauthenticated remote attacker to reach unauthorised data,yes
+Dell,PowerEdge Server BIOS,<1.2.6,CVE-2025-26482,4.9,CNA,MEDIUM,CWE-1258,Information disclosure in PowerEdge server BIOS and iDRAC9,yes
+Intel,Converged Security and Management Engine Firmware,unspecified,CVE-2025-27708,4.1,CNA,MEDIUM,CWE-125,Out-of-bounds read in CSME firmware allowing information disclosure,unknown
+Intel,Server Board D50DNP UEFI firmware,unspecified,CVE-2025-24308,7.5,CNA,HIGH,CWE-20,Improper input validation in the UEFI firmware error handler allowing privilege escalation,unknown
+Clevo,UEFI firmware update package,unspecified,CVE-2025-11577,7.6,CNA,HIGH,not listed,Firmware update packages shipped containing private Boot Guard signing keys,unknown
+GNU,GRUB2,unspecified,CVE-2025-0624,7.6,CNA,HIGH,CWE-787,Out-of-bounds write during network boot from a user-controlled environment variable,unknown
+GNU,GRUB2,unspecified,CVE-2025-1118,4.4,CNA,MEDIUM,CWE-501,The dump command is not blocked in lockdown mode allowing memory to be read,unknown

@@ -89,6 +89,13 @@ CWE_MITIGATIONS = {
     "CWE-330": "Use a cryptographically secure random source for session identifiers. Apply the fixed firmware version.",
     "CWE-119": "Apply the vendor firmware update and restrict the management interface to a dedicated out-of-band network.",
     "CWE-120": "Apply the vendor firmware update and restrict the management interface to a dedicated out-of-band network.",
+    "CWE-125": "Apply the vendor firmware update. Restrict who can reach the management interface until it is applied.",
+    "CWE-787": "Apply the vendor firmware update. Disable network boot where it is not required.",
+    "CWE-284": "Enforce authorisation on every request rather than on entry. Apply the fixed firmware version.",
+    "CWE-522": "Credential material must never be retrievable through a management interface. Apply the fixed version and rotate any exposed credentials.",
+    "CWE-20":  "Validate input against an allowlist at the trust boundary. Apply the vendor firmware update.",
+    "CWE-501": "Enforce the trust boundary in the bootloader lockdown policy. Apply the vendor update.",
+    "CWE-1258": "Apply the vendor firmware update and confirm debug interfaces are disabled in production builds.",
 }
 DEFAULT_MITIGATION = ("Apply the vendor's fixed version. If no fix exists, isolate the component "
                       "on a segregated management network and evaluate an alternative supplier.")

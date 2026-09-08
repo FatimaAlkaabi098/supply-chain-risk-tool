@@ -125,6 +125,32 @@ The jury runs this from a README on an unknown machine, so the tool must not
 assume a working directory. Paths passed explicitly on the command line still
 resolve normally.
 
+## Finding: NVD enrichment lags for recent CVEs
+
+While building the dataset we pulled 13 CVEs directly from the NVD API. Only
+**5 carry an NVD (NIST) primary CVSS score**. The other 8 have only a score
+supplied by the reporting organisation (the CNA).
+
+The split is almost entirely by age. Older, well-established CVEs are enriched;
+recent ones (2025-2026) frequently are not yet.
+
+This is not a flaw in our tool - it is a property of the reference data, and it
+has a direct consequence for anyone building on NVD: **you cannot assume a
+consistent scoring source.** Our `score_source` column records which was used
+for every entry so the difference is visible rather than hidden.
+
+It also reinforces the unknown-case argument. If the authoritative vulnerability
+database itself has coverage gaps, a procurement tool that treats "nothing found"
+as "nothing there" is unsafe by design.
+
+## Interpreting vendor version strings
+
+CVE-2023-25191 is fixed in "SPx_12-update-7.00". NVD's CPE entry lists the
+vulnerable configuration generically as version 12. We read the vendor's fix
+notation as 12.7 and recorded the range as `>=12.0 <12.7`. This is an
+interpretation of the vendor's own notation, recorded here rather than applied
+silently.
+
 ## Open questions
 
 - [ ] Confirm with organisers: is AI assistance permitted for the build, and must it be disclosed?
