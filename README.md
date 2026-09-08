@@ -2,79 +2,121 @@
 
 School of Cyber Defense 2026 — Team Shadow Djinn
 
-> The jury runs this from the README. If it does not run from a clean clone,
-> the prototype criterion (25%) is lost. Test it by cloning into a NEW folder.
+Scores an AI server **Bill of Materials for supply-chain risk before purchase**.
 
-## TODO before submission — delete this block when done
-
-- [ ] Every command below actually works from a fresh clone
-- [ ] Runs twice in a row with identical output, no crash
-- [ ] Handles an empty file, a missing column, and junk values gracefully
-- [ ] Demo BOM produces 2 vulnerable firmware components + 1 restricted vendor
-- [ ] Unmatched components are listed, not silently scored safe
-
----
-
-## What this is
-
-A scoring tool for AI server procurement. It ingests a Bill of Materials,
-scores each component for supply-chain risk, and produces a findings report
-with a mitigation or alternative for each risk.
+> Vulnerability scanners tell you what is wrong with the servers you already own.
+> This tells you what is wrong with the ones you are about to buy.
 
 **Who it is for:** a government or data-centre procurement office.
 **What it replaces:** manual vendor due-diligence spreadsheets.
 
+---
+
 ## Requirements
 
 - Python 3.9 or newer
-- No external libraries, no internet connection, no API keys
+- **No external libraries. No internet connection. No API keys.**
 
-## Install
+## Run it
 
 ```
 git clone <REPO URL>
 cd supply-chain-risk-tool
-```
-
-## Run
-
-```
-python score.py --bom data/demo_bom.csv --out reports/report.html
+python score.py
 ```
 
 Then open `reports/report.html`.
 
+To use your own files:
+
+```
+python score.py --bom data/demo_bom.csv --cves data/cve_dataset.csv --policy data/policy.csv --out reports/report.html
+```
+
+## What you should see
+
+```
+  Components assessed : 34
+  Overall BOM risk    : 29.7/100
+  Coverage            : 82% (6 could not be verified)
+  Verdict             : REJECT
+  1 component(s) come from a vendor blocked by procurement policy.
+
+     80.6  CRITICAL C008  Intel Active Management Technology Firmware  CVE-2018-3628
+     79.8  CRITICAL C006  Dell iDRAC9                                  CVE-2024-25943
+     74.6  HIGH     C007  NVIDIA DGX-1 BMC                             CVE-2023-25505
+     53.2  HIGH     C005  AMI MegaRAC SPx12                            CVE-2023-34329
+     51.0  HIGH     C012  Meridian Component Works MCW-25G-2P          -
+```
+
 ## Inputs
 
-| File | What it holds |
+| File | Holds |
 |---|---|
-| `data/demo_bom.csv` | The server bill of materials |
-| `data/cve_dataset.csv` | Known vulnerabilities, curated from NVD |
-| `data/policy.csv` | Restricted vendors and country risk tiers |
+| `data/demo_bom.csv` | The bill of materials — 34 components of an AI training rack |
+| `data/cve_dataset.csv` | Known vulnerabilities, verified against the NVD API |
+| `data/policy.csv` | Restricted vendors and country risk tiers — **organisation supplied** |
 
-The policy file is **configurable** — the tool ships an example policy and a
-procurement office supplies its own.
+The policy file is **configuration, not code**. A procurement office supplies its
+own restricted-supplier list and tiering; the tool enforces it rather than
+deciding it.
 
-## Output
+## How it scores
 
-An HTML report containing the overall BOM score and verdict, a coverage
-figure, the highest-risk components with their score breakdown, a mitigation
-or alternative for each, and any components that could not be matched.
+Three dimensions, as required by the brief:
 
-## Risk dimensions
+| Dimension | Weight | What it measures |
+|---|---|---|
+| Known vulnerabilities | 0.40 | Published CVEs matching this vendor, product and version |
+| Origin and vendor policy | 0.35 | Restricted suppliers and country risk tier |
+| Component factors | 0.25 | End-of-life status and single-source dependency |
 
-1. **Known vulnerabilities** — matched from the CVE dataset
-2. **Origin and vendor policy** — restricted vendors and country tiers
-3. **Component factors** — end-of-life status, single-source dependency
+The weighted result is multiplied by a **category criticality** factor (0.8–1.5).
+A baseboard management controller has total control of a machine and survives an
+operating system reinstall, so it is weighted 1.5×; a fan is weighted 0.8×.
 
-Plus **concentration risk** across the BOM as a whole.
+Two things beyond per-component scoring:
+
+- **Concentration risk** — the BOM is also assessed as a portfolio. Components
+  that are individually acceptable can still be a single point of failure if too
+  many critical parts share one supplier or one country.
+- **The unknown case** — components whose vendor, model or version cannot be
+  established are reported as **UNVERIFIABLE** and carry a defined uncertainty
+  penalty. They are never silently scored as safe.
+
+The verdict is rule-based, not a threshold on a single number:
+
+| Verdict | When |
+|---|---|
+| **REJECT** | Any component from a vendor blocked by policy |
+| **APPROVE WITH CONDITIONS** | Any CRITICAL component, or coverage below 90% |
+| **APPROVE** | Neither of the above |
+
+## Robustness
+
+Tested and passing:
+
+- Runs twice in a row with identical findings
+- Missing file, empty file, or headers with no rows → explains the problem
+- Missing required columns → names exactly which are missing
+- Junk values, duplicate IDs, blank rows, non-numeric quantities → warns and continues
+- Unicode and quoted fields handled
 
 ## Limitations
 
-<!-- Be honest here. Judges reward it and punish overclaiming. -->
-- The CVE dataset is curated and scoped to server hardware and firmware, not
-  the complete NVD feed. The matching logic is dataset-agnostic.
-- Scores are a **prioritisation index**, not a probability of compromise.
+Stated plainly, because overclaiming costs more than admitting scope.
+
+- The CVE dataset is **curated and scoped to server hardware and firmware**, not
+  the complete NVD feed. The matching logic is dataset-agnostic and would work
+  unchanged against the full feed.
+- Components are matched on **vendor + model + version**. Production tools match
+  on CPE strings; that was out of scope for the timeframe.
+- Scores are a **prioritisation index on a 0–100 scale, not a probability of
+  compromise.**
+- Country tiers in `policy.csv` are **illustrative placeholders**. Real tiering is
+  an organisational policy decision.
+
+Design decisions and their justifications are in [DECISIONS.md](DECISIONS.md).
 
 ## Team
 
