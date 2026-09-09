@@ -1,0 +1,19 @@
+component_id,component_name,category,vendor,model,version,country_of_origin,quantity,end_of_life,lead_time_weeks,validated_alternative
+D001,GPU accelerator module,gpu,NVIDIA,H100 SXM5,96.00.74,TW,8,no,12,yes
+D002,GPU accelerator module,gpu,AMD,Instinct MI300X,3.4.1,US,4,no,10,yes
+D003,Host processor,cpu,Intel,Xeon Platinum 8592+,SR-2026,US,2,no,8,yes
+D004,Host processor,cpu,AMD,EPYC 9754,B1,TW,2,no,9,yes
+D005,Baseboard management controller,bmc,AMI,MegaRAC SPx12,12.9.0,US,2,no,2,yes
+D006,Server management controller,bmc,Dell,iDRAC9,7.20.30.50,MY,2,no,2,yes
+D007,System BIOS,firmware,Supermicro,X14DEG-OAD BIOS,3.2,TW,4,no,2,yes
+D008,System BIOS,firmware,Dell,PowerEdge R770 BIOS,1.4.0,MY,2,no,2,yes
+D009,400G InfiniBand adapter,nic,NVIDIA,ConnectX-8 MCX800,30.42.1000,IL,8,no,10,yes
+D010,Ethernet controller,nic,Broadcom,BCM57608,222.1.10.0,US,6,no,8,yes
+D011,NVMe SSD 15.36TB,storage,Samsung,PM9D3a,GDC8501Q,KR,16,no,6,yes
+D012,NVMe SSD 15.36TB,storage,Kioxia,CD9-R,0201,JP,8,no,7,yes
+D013,DDR5 RDIMM 96GB,memory,Micron,MTC60F2KS1RC56,Rev C,SG,32,no,6,yes
+D014,DDR5 RDIMM 96GB,memory,SK Hynix,HMCG104MEBRA,Rev B,KR,32,no,6,yes
+D015,Power supply unit 3200W,psu,Delta Electronics,DPS-3200AB,2.1,TW,6,no,9,yes
+D016,Power supply unit 3200W,psu,Lite-On,PS-3321-1L,1.8,TW,2,no,10,yes
+D017,Liquid cooling distribution unit,cooling,Vertiv,CDU-800,5.1,US,1,no,12,yes
+D018,Chassis fan module,cooling,Supermicro,FAN-0180L4,Rev 3,TW,24,no,5,yes
