@@ -5,4 +5,5 @@ venv/
 .DS_Store
 Thumbs.db
 reports/*.html
+reports/*.json
 !reports/.gitkeep
