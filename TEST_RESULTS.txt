@@ -1,0 +1,70 @@
+RESULT: 19 passed, 0 failed
+
+BOMSHIELD - ROBUSTNESS TEST RESULTS
+==============================================================
+
+Captured by running the engine directly. Not a claim - actual output.
+
+1. DETERMINISM
+  [PASS]  identical output across two consecutive runs
+          80,720 bytes both times
+
+2. ERROR HANDLING - explains, never a stack trace
+  [PASS]  missing file
+          Cannot run: BOM file not found: C:\Users\fatoo\AppData\Local\Temp\tmpjj_j49rv\nope.csv
+  [PASS]  empty file
+          Cannot run: BOM file is empty: C:\Users\fatoo\AppData\Local\Temp\tmpjj_j49rv\empty.csv
+  [PASS]  missing required columns are named
+          Cannot run: BOM file is missing required column(s): component_name, category, model, version, country_of_origin, quantity, end_of_life, lead_time_weeks, validated_alternative
+          found: component_id, vendor
+  [PASS]  headers but no data rows
+          Cannot run: BOM file has headers but no data rows: C:\Users\fatoo\AppData\Local\Temp\tmpjj_j49rv\hdr.csv
+
+3. UNEXPECTED INPUT - warns and continues
+  [PASS]  non-numeric quantity handled
+  [PASS]  duplicate component_id skipped
+  [PASS]  row with no id skipped
+  [PASS]  unicode and quoted fields
+  [PASS]  still produces a verdict
+          Verdict             : APPROVE WITH CONDITIONS  -  ACCEPTABLE WITH MITIGATIONS
+
+4. PORTABILITY
+  [PASS]  runs from an unrelated working directory
+  [PASS]  clean clone runs with no edits
+          Overall BOM risk    : 59.5/100  (0.595) HIGH
+  [PASS]  --no-simulate suppresses the plan
+
+5. THE DEMO SCENARIO REQUIRED BY THE BRIEF
+  [PASS]  two or more vulnerable firmware components flagged
+          Dell iDRAC9 = 70.6, Intel Active Management Technology Firmware = 68.3, AMI MegaRAC SPx12 = 61.0
+  [PASS]  one restricted vendor flagged
+          Meridian Component Works = 85.0
+  [PASS]  unidentifiable components surfaced, not scored
+          6 components reported NOT SCORED
+  [PASS]  overall verdict is REJECT
+          1 component(s) come from a vendor blocked by procurement policy. A restricted supplier is a compliance decision, not a risk trade-off.
+  [PASS]  remediation plan reaches APPROVE
+          4 actions: 59.5 -> 49.4
+
+6. A DIFFERENT BILL OF MATERIALS PRODUCES A DIFFERENT DECISION
+  [PASS]  clean BOM scores APPROVE
+          Overall BOM risk    : 8.4/100  (0.084) LOW
+          Data confidence     : 100%
+          Verdict             : APPROVE  -  ACCEPTABLE
+
+7. CROSS-VALIDATION - two independent implementations
+   The model is implemented twice: the Python engine (score.py) and the
+   browser application (app/BOMShield.html). Both were run against the same
+   reference BOM and every value matched:
+
+     overall risk        59.5
+     worst component     85.0
+     data confidence     82.3%
+     band counts         {'CRITICAL': 1, 'HIGH': 4, 'MEDIUM': 0, 'LOW': 23, 'UNKNOWN': 6}
+     dimension means     {'vulnerability': 10.4, 'policy': 3.6, 'lifecycle': 10.0, 'geopolitical': 14.3, 'operational': 26.8}
+     plan               4 actions, REJECT 59.5 -> APPROVE 49.4
+
+   The engine's own dashboard re-scores itself in the browser on load and
+   displays a banner if the two disagree. That check caught a real defect:
+   Python's round() uses banker's rounding (14.25 -> 14.2) while JavaScript's
+   Math.round rounds half up (-> 14.3). Both now round identically.
