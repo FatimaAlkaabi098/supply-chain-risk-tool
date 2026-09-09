@@ -193,6 +193,103 @@ the version silently cleared the policy block and flipped REJECT to APPROVE.
 IDENTIFY now fills in **only the fields that are actually missing**. Knowing a
 part's version does not make its supplier acceptable.
 
+## Five dimensions (revision, 9 September)
+
+On our supervisor's direction the model was extended from three dimensions to
+five, separating concerns that had been bundled together:
+
+| Before | After |
+|---|---|
+| Origin and vendor policy | **Vendor / Policy** (restricted suppliers) + **Geopolitical** (country tier, undeclared origin) |
+| Component factors | **Lifecycle** (end of life) + **Operational** (single-source, validated alternative, lead time) |
+| Known vulnerabilities | **Vulnerability**, now severity x likelihood |
+
+| Dimension | Weight | Reasoning |
+|---|---|---|
+| Vulnerability | 0.30 | Still the largest single factor: the only dimension describing a directly exploitable path |
+| Vendor / Policy | 0.20 | A compliance blocker in government procurement, not a preference |
+| Geopolitical | 0.20 | For government buyers, provenance is a first-class concern equal to supplier policy |
+| Lifecycle | 0.15 | Future exposure rather than present exploitability |
+| Operational | 0.15 | Continuity and availability rather than confidentiality or integrity |
+
+The BOM gained two supplier-declared fields to support the Operational
+dimension: `lead_time_weeks` and `validated_alternative`.
+
+## Severity is not likelihood
+
+The Vulnerability dimension now combines two independent signals:
+
+- **CVSS** states how bad exploitation would be.
+- **EPSS** states how likely exploitation is, as a percentile among all CVEs.
+
+Severity alone over-ranks vulnerabilities nobody is exploiting, so the EPSS
+percentile modulates the score by up to 30%. A **CISA KEV** listing overrides
+both and floors the score at 90, because KEV means exploitation is an observed
+fact rather than a prediction.
+
+Both were pulled from authoritative sources: EPSS from the FIRST API, KEV from
+the CISA catalogue (1,699 entries, released 2026-09-08).
+
+**Result on our dataset: none of the 13 CVEs are KEV-listed, and all have low
+EPSS scores.** The highest is CVE-2025-0624 at 0.014 (71st percentile). So no
+component reaches CRITICAL on vulnerability alone - which is the model working
+correctly, not a gap. A CVSS 9.8 that nobody is exploiting genuinely is a lower
+procurement priority than a restricted supplier you are forbidden to buy from.
+
+## A weighted mean dilutes a single severe finding
+
+The first five-dimension run scored a component carrying a CVSS 9.8 remote
+code execution as MEDIUM, because its other four dimensions were clean. That is
+wrong: averaging must not wash out a condition that is true right now.
+
+**Vulnerability and Policy can each set a floor** under a component's score at
+85% of their own value. Lifecycle, Geopolitical and Operational describe
+exposure and resilience - real, but not by themselves disqualifying - so they
+contribute only through the weighted mean.
+
+The same argument applies at BOM level: a bill of materials is not acceptable
+because most of it is fine. The overall score is floored at **70% of the worst
+component**, because procurement rejects on the worst line item. Without this
+the demo BOM read as LOW risk while simultaneously being REJECTED.
+
+Every component record reports which rule set its score, so the arithmetic is
+never hidden.
+
+## Unknown components are NOT SCORED, not penalised
+
+Earlier versions gave unidentifiable components a 50/100 uncertainty penalty.
+That was replaced: they are now reported as **NOT SCORED** and excluded from the
+scored population, with data confidence reporting the shortfall.
+
+Assigning a number to something we cannot assess implies a precision we do not
+have. Excluding them and stating the coverage is more honest, and it still
+prevents the failure the brief warns about - they are never classified as safe,
+and coverage below 90% blocks an APPROVE verdict on its own.
+
+## Hybrid scoring
+
+Every score is reported three ways: a qualitative band (LOW / MEDIUM / HIGH /
+CRITICAL), a 0-100 index, and a normalised 0.0-1.0 value. Procurement officers
+think in bands; the index supports ranking; the normalised value supports
+downstream calculation.
+
+## One model, two implementations, one self-check
+
+The what-if simulator has to recalculate in the browser, and browsers cannot run
+Python. The scoring model therefore exists twice: in `score.py` and in the
+dashboard's JavaScript.
+
+Two implementations of one model is a correctness risk, so **the dashboard
+re-scores the baseline on load and compares its results against the values
+Python computed**, showing a warning banner on any disagreement over 0.1. The
+check is visible to anyone who opens the file.
+
+**It immediately earned its place.** On first run it reported component C027 as
+14.3 in the browser against 14.2 in Python. The cause was rounding: Python's
+`round()` uses banker's rounding (14.25 to 14.2) while JavaScript's
+`Math.round` rounds half up (14.25 to 14.3). Python now uses an explicit
+round-half-away-from-zero helper, and the two agree exactly.
+
 ## Open questions
 
 - [ ] Confirm with organisers: is AI assistance permitted for the build, and must it be disclosed?
@@ -208,3 +305,8 @@ part's version does not make its supplier acceptable.
 | 2026-09-07 | Team | NVD score used over CNA score throughout | Comparability across the dataset. |
 | 2026-09-07 | Team | Match on vendor + model, not CPE | CPE matching out of scope for a 4-day build. |
 | 2026-09-07 | Team | Added `end_of_life` column to the BOM | Dimension 3 needs a lifecycle signal a procurement BOM would realistically carry. |
+| 2026-09-09 | Supervisor | Extend to five dimensions, add a dashboard | Adaptive risk scoring covering geopolitical and operational risk. |
+| 2026-09-09 | Team | EPSS and KEV added as vulnerability evidence | Severity and likelihood are different questions. |
+| 2026-09-09 | Team | Dominance floor for Vulnerability and Policy | A weighted mean was diluting critical single findings. |
+| 2026-09-09 | Team | Unknown components NOT SCORED rather than penalised | A number implies precision we do not have. |
+| 2026-09-09 | Team | Declined CycloneDX ingestion and a policy-pack selector | CSV is permitted by the brief; effort went to the dashboard instead. |

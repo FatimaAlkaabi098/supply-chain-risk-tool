@@ -1,11 +1,12 @@
-# Supply Chain Risk Scoring Tool (Software-Only Version)
+# BOMShield
 
+**AI Server Supply-Chain Risk Assessment**
 School of Cyber Defense 2026 — Team Shadow Djinn
 
 Scores an AI server **Bill of Materials for supply-chain risk before purchase**.
 
 > Vulnerability scanners tell you what is wrong with the servers you already own.
-> This tells you what is wrong with the ones you are about to buy.
+> BOMShield tells you what is wrong with the ones you are about to buy.
 
 **Who it is for:** a government or data-centre procurement office.
 **What it replaces:** manual vendor due-diligence spreadsheets.
@@ -15,7 +16,7 @@ Scores an AI server **Bill of Materials for supply-chain risk before purchase**.
 ## Requirements
 
 - Python 3.9 or newer
-- **No external libraries. No internet connection. No API keys.**
+- **No external libraries. No internet connection. No API keys. No build step.**
 
 ## Run it
 
@@ -25,105 +26,146 @@ cd supply-chain-risk-tool
 python score.py
 ```
 
-Then open `reports/report.html`.
+Then open **`reports/dashboard.html`** by double-clicking it.
 
-The tool resolves its default data files relative to `score.py` itself, so it
-runs correctly from any working directory - the project folder, an IDE Run
-button, or anywhere else.
-
-To use your own files:
+Default data paths resolve relative to `score.py`, so it runs correctly from any
+working directory — the project folder, an IDE Run button, or anywhere else.
 
 ```
-python score.py --bom data/demo_bom.csv --cves data/cve_dataset.csv --policy data/policy.csv --out reports/report.html
+python score.py --bom data/demo_bom.csv --policy data/policy.csv --no-simulate
 ```
 
-## What you should see
+## Outputs
 
-```
-  Components assessed : 34
-  Overall BOM risk    : 29.7/100
-  Coverage            : 82% (6 could not be verified)
-  Verdict             : REJECT
-  1 component(s) come from a vendor blocked by procurement policy.
+| File | What it is |
+|---|---|
+| `reports/dashboard.html` | **The application.** Interactive, self-contained, opens offline |
+| `reports/report.html` | Static printable findings report, no JavaScript required |
+| `reports/data.json` | The scored data, for reuse |
 
-     80.6  CRITICAL C008  Intel Active Management Technology Firmware  CVE-2018-3628
-     79.8  CRITICAL C006  Dell iDRAC9                                  CVE-2024-25943
-     74.6  HIGH     C007  NVIDIA DGX-1 BMC                             CVE-2023-25505
-     53.2  HIGH     C005  AMI MegaRAC SPx12                            CVE-2023-34329
-     51.0  HIGH     C012  Meridian Component Works MCW-25G-2P          -
-```
+---
+
+## The dashboard
+
+A single HTML file — no server, no CDN, no dependencies. It contains:
+
+- **Decision banner and KPI bar** — overall risk, worst component, counts by band, data confidence, restricted vendors, CVE count
+- **Five risk-dimension cards**, clickable to sort the table by that dimension
+- **Component risk table** — sortable on every column, filterable by risk band, category, vendor and origin, with full-text search across components, vendors and CVE identifiers, plus an *actionable only* toggle
+- **Drill-down panel** — click any component for its per-dimension scores, the reason behind each, the CVE evidence including KEV and EPSS, and the recommended action
+- **Priority findings** — the top four issues with their required action
+- **What-if procurement simulator** — see below
+- **Risk matrix** — severity (CVSS) against likelihood (EPSS percentile), clickable
+- **Geopolitical exposure** and **operational dependency** panels
+- **Data confidence panel** with the unscored components listed
+- **Upload your own BOM** — the page reads and scores a CSV entirely in the browser
+
+## Five risk dimensions — adaptive scoring
+
+| Dimension | Weight | What it measures |
+|---|---|---|
+| Vulnerability | 0.30 | Published CVEs, combining CVSS severity with EPSS exploitation likelihood |
+| Vendor / Policy | 0.20 | Restricted and under-review suppliers |
+| Lifecycle | 0.15 | End-of-life and support horizon |
+| Geopolitical | 0.20 | Country-of-origin tier and undeclared provenance |
+| Operational | 0.15 | Single-source dependency, validated alternatives, lead time |
+
+The weighted result is multiplied by a **category criticality** factor (0.8–1.5):
+a baseboard management controller has total control of a machine and survives an
+operating system reinstall, so it is weighted 1.5×; a fan is weighted 0.8×.
+
+**Vulnerability and Policy can each set a floor** under a component's score at 85%
+of their own value, because a weighted mean would otherwise average away a
+condition that is true right now. At BOM level the overall score is floored at
+70% of the worst component — procurement rejects on the worst line item, not the
+average. Every component reports which rule set its score.
+
+## Hybrid scoring
+
+Every score is reported three ways:
+
+- **Qualitative** — LOW / MEDIUM / HIGH / CRITICAL
+- **Quantitative** — 0–100 index
+- **Normalised** — 0.0–1.0
+
+## Severity is not likelihood
+
+CVSS says how bad exploitation would be. **EPSS** says how likely it is. The EPSS
+percentile modulates the vulnerability score by up to 30%, and a **CISA KEV**
+listing overrides both — KEV means exploitation is observed, not predicted.
+
+EPSS comes from the FIRST API and KEV from the CISA catalogue, both fetched at
+build time and stored in `data/cve_dataset.csv`.
+
+## Unknown components are NOT SCORED
+
+Components whose vendor, model or version cannot be established are reported as
+**NOT SCORED** — never as 0, and never classified as safe. They are listed
+separately and reduce data confidence. Coverage below 90% blocks an APPROVE
+verdict on its own.
+
+## Verdict
+
+Rule-based, not a threshold on a single number:
+
+| Verdict | Banner | When |
+|---|---|---|
+| **REJECT** | Procurement review required | Any component from a vendor blocked by policy |
+| **APPROVE WITH CONDITIONS** | Acceptable with mitigations | Any CRITICAL component, or coverage below 90% |
+| **APPROVE** | Acceptable | Neither of the above |
+
+## What-if procurement simulator
+
+Tick any combination of remediation actions and the dashboard **recalculates the
+whole BOM live** — overall risk, data confidence and verdict. *Apply recommended
+plan* selects the smallest set that reaches APPROVE.
+
+Four action types are derived automatically from the findings: **PATCH** (to the
+first fixed version, computed from the affected range), **REPLACE** (an approved
+supplier already in the BOM), **REFRESH** (end-of-life part), and **IDENTIFY**
+(obtain missing provenance).
+
+On the demo BOM, 4 actions take it from **REJECT at 59.5** to **APPROVE at 49.4**,
+with data confidence rising from 82% to 91%.
+
+> Note that IDENTIFY actions raise confidence without lowering risk — and can
+> raise it. That is correct: resolving an unknown replaces an absence of
+> information with a real finding. The tool reports risk and confidence
+> separately for exactly this reason.
+
+## One model, two implementations, one self-check
+
+The simulator recalculates in the browser, so the scoring model exists twice: in
+`score.py` and in the dashboard's JavaScript. To guard against drift, **the
+dashboard re-scores the baseline on load and compares it against the values
+Python computed**, showing a banner if they disagree. That check is visible on
+the page.
+
+It has already caught a real defect — a banker's-rounding difference between the
+two runtimes. See [DECISIONS.md](DECISIONS.md).
 
 ## Inputs
 
 | File | Holds |
 |---|---|
-| `data/demo_bom.csv` | The bill of materials — 34 components of an AI training rack |
-| `data/cve_dataset.csv` | Known vulnerabilities, verified against the NVD API |
+| `data/demo_bom.csv` | 34 components of an AI training rack |
+| `data/cve_dataset.csv` | 13 CVEs verified against the NVD API, with KEV and EPSS |
 | `data/policy.csv` | Restricted vendors and country risk tiers — **organisation supplied** |
 
 The policy file is **configuration, not code**. A procurement office supplies its
-own restricted-supplier list and tiering; the tool enforces it rather than
+own restricted-supplier list and tiering; BOMShield enforces it rather than
 deciding it.
-
-## How it scores
-
-Three dimensions, as required by the brief:
-
-| Dimension | Weight | What it measures |
-|---|---|---|
-| Known vulnerabilities | 0.40 | Published CVEs matching this vendor, product and version |
-| Origin and vendor policy | 0.35 | Restricted suppliers and country risk tier |
-| Component factors | 0.25 | End-of-life status and single-source dependency |
-
-The weighted result is multiplied by a **category criticality** factor (0.8–1.5).
-A baseboard management controller has total control of a machine and survives an
-operating system reinstall, so it is weighted 1.5×; a fan is weighted 0.8×.
-
-Two things beyond per-component scoring:
-
-- **Concentration risk** — the BOM is also assessed as a portfolio. Components
-  that are individually acceptable can still be a single point of failure if too
-  many critical parts share one supplier or one country.
-- **The unknown case** — components whose vendor, model or version cannot be
-  established are reported as **UNVERIFIABLE** and carry a defined uncertainty
-  penalty. They are never silently scored as safe.
-
-### Remediation simulator
-
-The report does not stop at what is wrong. It computes **the smallest set of
-changes that makes the purchase acceptable**, and shows the score and verdict
-after each step:
-
-```
-  6 action(s) take this BOM from REJECT (29.7) to APPROVE (22.8)
-    1. [REPLACE ] Re-source Dual-port 25GbE NIC from Broadcom      -> 28.5  APPROVE WITH CONDITIONS
-    2. [PATCH   ] Update Dell iDRAC9 to 7.00.00.182                -> 26.1  APPROVE WITH CONDITIONS
-    3. [PATCH   ] Update Intel AMT Firmware to 11.22.71            -> 24.1  APPROVE WITH CONDITIONS
-    4. [IDENTIFY] Obtain version, origin for Rear I/O backplane    -> 23.6  APPROVE WITH CONDITIONS
-    5. [IDENTIFY] Obtain version for GPU power cable harness       -> 23.2  APPROVE WITH CONDITIONS
-    6. [IDENTIFY] Obtain version, origin for Rack mounting rails   -> 22.8  APPROVE
-```
-
-Actions are ranked by **distance to the approval conditions**, not by points
-saved - so every step clears a real blocker. Disable with `--no-simulate`.
-
-The verdict is rule-based, not a threshold on a single number:
-
-| Verdict | When |
-|---|---|
-| **REJECT** | Any component from a vendor blocked by policy |
-| **APPROVE WITH CONDITIONS** | Any CRITICAL component, or coverage below 90% |
-| **APPROVE** | Neither of the above |
 
 ## Robustness
 
-Tested and passing:
+12 tests, all passing:
 
-- Runs twice in a row with identical findings
-- Missing file, empty file, or headers with no rows → explains the problem
-- Missing required columns → names exactly which are missing
-- Junk values, duplicate IDs, blank rows, non-numeric quantities → warns and continues
-- Unicode and quoted fields handled
+- Runs twice with byte-identical output
+- Missing file, empty file, headers with no rows → explains the problem
+- Missing required columns → names exactly which
+- Junk values, duplicate IDs, blank rows, non-numeric quantities, Unicode → warns and continues
+- Runs from any working directory
+- **Clean clone → `python score.py` → runs unmodified**
 - Full run including the simulator completes in under one second
 
 ## Limitations
@@ -131,14 +173,14 @@ Tested and passing:
 Stated plainly, because overclaiming costs more than admitting scope.
 
 - The CVE dataset is **curated and scoped to server hardware and firmware**, not
-  the complete NVD feed. The matching logic is dataset-agnostic and would work
-  unchanged against the full feed.
+  the complete NVD feed. The matching logic is dataset-agnostic.
 - Components are matched on **vendor + model + version**. Production tools match
-  on CPE strings; that was out of scope for the timeframe.
-- Scores are a **prioritisation index on a 0–100 scale, not a probability of
-  compromise.**
+  on CPE strings; out of scope for the timeframe.
+- Scores are a **prioritisation index, not a probability of compromise.**
 - Country tiers in `policy.csv` are **illustrative placeholders**. Real tiering is
   an organisational policy decision.
+- CycloneDX and SPDX ingestion is not implemented; CSV is explicitly permitted by
+  the brief and the effort went into the dashboard instead.
 
 Design decisions and their justifications are in [DECISIONS.md](DECISIONS.md).
 
