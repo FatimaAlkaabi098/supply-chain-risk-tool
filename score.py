@@ -1,88 +1,126 @@
 """
-Supply Chain Risk Scoring Tool (Software-Only Version)
+BOMShield - AI Server Supply-Chain Risk Assessment
 School of Cyber Defense 2026 - Team Shadow Djinn
 
 Scores an AI server Bill of Materials for supply-chain risk before purchase.
 
 Usage:
     python score.py
-    python score.py --bom data/demo_bom.csv --out reports/report.html
+    python score.py --bom data/demo_bom.csv
 
-Three risk dimensions, as required by the brief:
-    1. Known vulnerabilities   - matched against a CVE dataset
-    2. Origin and vendor policy - restricted vendors and country tiers
-    3. Component factors        - end-of-life and single-source dependency
+Outputs:
+    reports/dashboard.html   interactive dashboard (open this one)
+    reports/report.html      static findings report
+    reports/data.json        the scored data, for reuse
 
-Plus:
-    - concentration risk across the BOM as a whole
-    - unverifiable components surfaced, never silently scored as safe
+FIVE RISK DIMENSIONS (adaptive risk scoring):
+    1. Vulnerability  - published CVEs, weighted by CVSS severity and EPSS likelihood
+    2. Vendor/Policy  - restricted and under-review suppliers
+    3. Lifecycle      - end-of-life and support horizon
+    4. Geopolitical   - country-of-origin tier and undeclared provenance
+    5. Operational    - single-source dependency, validated alternatives, lead time
 
-Every weight and threshold in this file is justified in DECISIONS.md.
+HYBRID SCORING: every score is reported three ways - a qualitative band
+(LOW/MEDIUM/HIGH/CRITICAL), a 0-100 index, and a normalised 0.0-1.0 value.
+
+Components whose identity cannot be established are NOT SCORED, never scored
+as zero. They are reported separately and reduce data confidence.
+
+Every weight and threshold is justified in DECISIONS.md.
 """
 
 import argparse
 import csv
-import html
+import json
+import math
 import os
 import re
 import sys
 from collections import Counter, defaultdict
-from datetime import datetime
 
 # ---------------------------------------------------------------------------
 # Scoring configuration - justified in DECISIONS.md
 # ---------------------------------------------------------------------------
-W_VULNERABILITY = 0.40
-W_POLICY        = 0.35
-W_COMPONENT     = 0.25
+DIMENSIONS = ["vulnerability", "policy", "lifecycle", "geopolitical", "operational"]
+DIMENSION_LABELS = {
+    "vulnerability": "Vulnerability",
+    "policy":        "Vendor / Policy",
+    "lifecycle":     "Lifecycle",
+    "geopolitical":  "Geopolitical",
+    "operational":   "Operational",
+}
+WEIGHTS = {
+    "vulnerability": 0.30,
+    "policy":        0.20,
+    "lifecycle":     0.15,
+    "geopolitical":  0.20,
+    "operational":   0.15,
+}
 
 # A management controller failure is worse than a fan failure.
 CRITICALITY = {
-    "bmc":      1.5,
-    "firmware": 1.5,
-    "cpu":      1.3,
-    "gpu":      1.2,
-    "nic":      1.2,
-    "storage":  1.0,
-    "memory":   1.0,
-    "psu":      0.8,
-    "cooling":  0.8,
-    "other":    0.9,
+    "bmc": 1.5, "firmware": 1.5, "cpu": 1.3, "gpu": 1.2, "nic": 1.2,
+    "storage": 1.0, "memory": 1.0, "psu": 0.8, "cooling": 0.8, "other": 0.9,
 }
 DEFAULT_CRITICALITY = 1.0
 
-# A component we cannot identify is not a component we have cleared.
-# It carries a defined uncertainty penalty rather than a zero.
-UNVERIFIED_PENALTY = 50.0
+# Vulnerability: severity x likelihood.
+# CVSS states how bad it would be; EPSS states how likely exploitation is.
+# Severity alone over-ranks vulnerabilities nobody is exploiting, so the EPSS
+# percentile modulates the score by up to 30%. A CISA KEV listing means
+# exploitation is not a prediction but an observed fact, so it overrides both.
+EPSS_MODULATION = 0.30
+KEV_FLOOR = 90.0
 
 POLICY_SCORES = {"restricted": 100.0, "review": 60.0}
 COUNTRY_TIER_SCORES = {"1": 10.0, "2": 40.0, "3": 70.0}
+UNDECLARED_ORIGIN_SCORE = 70.0
 
-EOL_SCORES = {"yes": 60.0, "unknown": 30.0, "no": 0.0}
-SINGLE_SOURCE_SCORE = 40.0
+EOL_SCORES = {"yes": 80.0, "unknown": 40.0, "no": 0.0}
 
-# Concentration risk: a BOM can be low risk part by part and still be
-# fragile as a portfolio.
-CONCENTRATION_THRESHOLD = 0.40   # one country supplying more than 40%
+NO_ALTERNATIVE_SCORE = 50.0
+UNKNOWN_ALTERNATIVE_SCORE = 30.0
+SINGLE_SOURCE_SCORE = 30.0
+LEAD_TIME_LONG_WEEKS = 16
+LEAD_TIME_VERY_LONG_WEEKS = 26
+LEAD_TIME_LONG_SCORE = 20.0
+LEAD_TIME_VERY_LONG_SCORE = 30.0
+
+# A weighted mean dilutes a single severe finding: a component with a critical
+# remotely-exploitable vulnerability would be averaged down by four clean
+# dimensions. Vulnerability and Policy describe conditions that are true NOW -
+# an exploitable flaw, or a supplier the organisation may not buy from - so
+# either can set a floor under the component's score on its own. Lifecycle,
+# Geopolitical and Operational describe exposure and resilience: real, but not
+# by themselves disqualifying, so they contribute only through the mean.
+DOMINANT_DIMENSIONS = ("vulnerability", "policy")
+DOMINANCE = 0.85
+
+# The same argument at BOM level. A bill of materials is not acceptable because
+# most of it is fine - procurement rejects on the worst line item.
+WORST_COMPONENT_FLOOR = 0.70
+
+CONCENTRATION_THRESHOLD = 0.40
 CONCENTRATION_MAX = 15.0
 CRITICAL_CATEGORIES = {"bmc", "firmware", "cpu", "gpu"}
 
 BANDS = [(75, "CRITICAL"), (50, "HIGH"), (25, "MEDIUM"), (0, "LOW")]
+COVERAGE_TARGET = 0.90
 
 REQUIRED_BOM_COLUMNS = [
-    "component_id", "component_name", "category", "vendor",
-    "model", "version", "country_of_origin", "quantity", "end_of_life",
+    "component_id", "component_name", "category", "vendor", "model", "version",
+    "country_of_origin", "quantity", "end_of_life",
+    "lead_time_weeks", "validated_alternative",
 ]
 REQUIRED_CVE_COLUMNS = [
-    "vendor", "product", "version_affected", "cve_id",
-    "cvss_score", "score_source", "severity", "cwe",
-    "description", "fix_available",
+    "vendor", "product", "version_affected", "cve_id", "cvss_score",
+    "score_source", "severity", "cwe", "description", "fix_available",
+    "kev", "epss", "epss_percentile",
 ]
 REQUIRED_POLICY_COLUMNS = ["rule_type", "key", "risk_tier", "action", "justification"]
 
 UNKNOWN_VALUES = {"unknown", "", "n/a", "none", "-", "tbd"}
 
-# The CWE tells you the fix. This is the mitigation ladder applied to findings.
 CWE_MITIGATIONS = {
     "CWE-290": "Do not trust client-supplied headers for authentication; verify identity server-side. Apply the fixed firmware version.",
     "CWE-306": "Require authentication on every privileged function. Apply the fixed firmware version.",
@@ -100,16 +138,23 @@ CWE_MITIGATIONS = {
 DEFAULT_MITIGATION = ("Apply the vendor's fixed version. If no fix exists, isolate the component "
                       "on a segregated management network and evaluate an alternative supplier.")
 
-
-# Default input paths resolve relative to THIS FILE, not to the shell's current
-# directory, so the tool runs correctly however it is launched - from the
-# project folder, from an IDE Run button, or from anywhere else. A path given
-# explicitly on the command line is still resolved normally.
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_BOM    = os.path.join(HERE, "data", "demo_bom.csv")
 DEFAULT_CVES   = os.path.join(HERE, "data", "cve_dataset.csv")
 DEFAULT_POLICY = os.path.join(HERE, "data", "policy.csv")
-DEFAULT_OUT    = os.path.join(HERE, "reports", "report.html")
+DEFAULT_OUTDIR = os.path.join(HERE, "reports")
+
+
+def r1(value):
+    """Round to one decimal, half away from zero.
+
+    Python's built-in round() uses banker's rounding (14.25 -> 14.2) while
+    JavaScript's Math.round rounds half up (14.25 -> 14.3). The dashboard
+    re-scores in the browser, so the two must agree exactly or the model
+    self-check fails. It did fail, on exactly this: component C027 scored
+    14.25 and the two runtimes disagreed. Both now round half away from zero.
+    """
+    return math.floor(value * 10 + 0.5) / 10 if value >= 0 else -(math.floor(-value * 10 + 0.5) / 10)
 
 
 class DataError(Exception):
@@ -117,7 +162,7 @@ class DataError(Exception):
 
 
 # ---------------------------------------------------------------------------
-# Loading - every loader must fail with an explanation, never a stack trace
+# Loading - every loader fails with an explanation, never a stack trace
 # ---------------------------------------------------------------------------
 def _read_csv(path, required, label):
     if not os.path.exists(path):
@@ -137,7 +182,7 @@ def _read_csv(path, required, label):
             for raw in reader:
                 row = {(k or "").strip(): (v or "").strip() for k, v in raw.items() if k}
                 if not any(row.get(c) for c in required):
-                    continue                      # blank or padding row
+                    continue
                 rows.append(row)
     except UnicodeDecodeError:
         raise DataError(f"{label} file is not valid UTF-8 text: {path}")
@@ -190,15 +235,13 @@ def load_policy(path):
 # Version handling
 # ---------------------------------------------------------------------------
 def _version_tuple(value):
-    """('6.10.80.00') -> (6, 10, 80, 0). Returns None if not comparable."""
     if value is None:
         return None
     text = value.strip().lower()
     if text in UNKNOWN_VALUES:
         return None
-    parts = re.split(r"[.\-_]", text)
     numbers = []
-    for part in parts:
+    for part in re.split(r"[.\-_]", text):
         if part.isdigit():
             numbers.append(int(part))
         else:
@@ -210,7 +253,6 @@ def _version_tuple(value):
 
 
 def compare_versions(a, b):
-    """-1 if a < b, 0 if equal, 1 if a > b. None when not comparable."""
     ta, tb = _version_tuple(a), _version_tuple(b)
     if ta is None or tb is None:
         return None
@@ -221,7 +263,6 @@ def compare_versions(a, b):
 
 
 def in_affected_range(version, range_string):
-    """Is `version` inside a range such as '>=12.0 <12.4' or '<3.39.30'?"""
     if not range_string or range_string.strip().lower() in UNKNOWN_VALUES | {"unspecified"}:
         return False
     for token in range_string.split():
@@ -244,26 +285,18 @@ def in_affected_range(version, range_string):
 
 
 def first_fixed_version(range_string):
-    """The lowest version NOT covered by an affected range, where determinable.
-
-        '<7.00.00.182'      -> '7.00.00.182'   (the bound itself is fixed)
-        '>=12.0 <12.7'      -> '12.7'
-        '>=3.0 <=11.22.70'  -> '11.22.71'      (bump past an inclusive bound)
-
-    Returns None when the range does not state an upper bound, which is why
-    'unspecified' entries can never be remediated by patching.
-    """
+    """Lowest version NOT covered by an affected range, where determinable."""
     if not range_string:
         return None
     tokens = range_string.split()
     for token in tokens:
-        match = re.match(r"^<(?!=)(.+)$", token)
-        if match:
-            return match.group(1)
+        m = re.match(r"^<(?!=)(.+)$", token)
+        if m:
+            return m.group(1)
     for token in tokens:
-        match = re.match(r"^<=(.+)$", token)
-        if match:
-            parts = match.group(1).split(".")
+        m = re.match(r"^<=(.+)$", token)
+        if m:
+            parts = m.group(1).split(".")
             try:
                 parts[-1] = str(int(parts[-1]) + 1)
             except ValueError:
@@ -272,75 +305,127 @@ def first_fixed_version(range_string):
     return None
 
 
+def _number(value, default=None):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
 # ---------------------------------------------------------------------------
-# Dimension 1 - known vulnerabilities
+# Identity
 # ---------------------------------------------------------------------------
 def is_identifiable(component):
-    """Can we establish what this part actually is?"""
-    return not (
-        component["vendor"].lower() in UNKNOWN_VALUES
-        or component["model"].lower() in UNKNOWN_VALUES
-        or component["version"].lower() in UNKNOWN_VALUES
-    )
+    return not (component["vendor"].lower() in UNKNOWN_VALUES
+                or component["model"].lower() in UNKNOWN_VALUES
+                or component["version"].lower() in UNKNOWN_VALUES)
 
 
-def match_cves(component, cve_data):
-    """Returns (score 0-100, list of matched CVE rows, status)."""
-    if not is_identifiable(component):
-        return UNVERIFIED_PENALTY, [], "UNVERIFIED"
+def band_for(score):
+    for threshold, name in BANDS:
+        if score >= threshold:
+            return name
+    return "LOW"
 
+
+# ---------------------------------------------------------------------------
+# The five dimensions
+# ---------------------------------------------------------------------------
+def dim_vulnerability(component, cve_data):
+    """Severity x likelihood. Returns (score, matched CVEs, reasons)."""
     matches = []
     for cve in cve_data:
         if (component["vendor"].lower() == cve["vendor"].lower()
                 and component["model"].lower() == cve["product"].lower()
                 and in_affected_range(component["version"], cve["version_affected"])):
             matches.append(cve)
-
     if not matches:
-        return 0.0, [], "VERIFIED"
+        return 0.0, [], []
 
-    def cvss(row):
-        try:
-            return float(row["cvss_score"])
-        except ValueError:
-            return 0.0
+    matches.sort(key=lambda r: (-(_number(r["cvss_score"], 0.0)), r["cve_id"]))
+    worst = matches[0]
+    cvss = _number(worst["cvss_score"], 0.0)
+    base = cvss * 10.0
 
-    matches.sort(key=lambda r: (-cvss(r), r["cve_id"]))
-    return cvss(matches[0]) * 10.0, matches, "VULNERABLE"
-
-
-# ---------------------------------------------------------------------------
-# Dimension 2 - origin and vendor policy
-# ---------------------------------------------------------------------------
-def apply_policy(component, policy):
-    """Returns (score 0-100, list of reasons, blocking flag)."""
-    reasons, score, blocking = [], 0.0, False
-
-    rule = policy["vendors"].get(component["vendor"].lower())
-    if rule:
-        tier = rule["risk_tier"].lower()
-        score = max(score, POLICY_SCORES.get(tier, 50.0))
-        reasons.append(f"Vendor '{component['vendor']}' is {tier}: {rule['justification']}")
-        if rule["action"].lower() == "block":
-            blocking = True
-
-    country = component["country_of_origin"].lower()
-    crule = policy["countries"].get(country)
-    if crule:
-        tier_score = COUNTRY_TIER_SCORES.get(crule["risk_tier"], 40.0)
-        if tier_score > 10.0:
-            reasons.append(f"Origin {component['country_of_origin']} is tier "
-                           f"{crule['risk_tier']}: {crule['justification']}")
-        score = max(score, tier_score)
+    percentile = _number(worst.get("epss_percentile"), None)
+    if percentile is None:
+        score = base
+        reason = f"CVSS {cvss} with no EPSS data - severity used unmodulated"
     else:
-        score = max(score, COUNTRY_TIER_SCORES["3"])
-        reasons.append(f"Origin '{component['country_of_origin']}' is not covered by the policy file")
+        factor = (1.0 - EPSS_MODULATION) + EPSS_MODULATION * percentile
+        score = base * factor
+        reason = (f"CVSS {cvss} modulated by EPSS percentile {percentile:.2f} "
+                  f"(exploitation likelihood)")
 
-    return score, reasons, blocking
+    reasons = [reason]
+    if any(c.get("kev", "").lower().startswith("y") for c in matches):
+        score = max(score, KEV_FLOOR)
+        reasons.append("Listed in the CISA Known Exploited Vulnerabilities catalogue - "
+                       "exploitation is observed, not predicted")
+    return min(100.0, score), matches, reasons
+
+
+def dim_policy(component, policy):
+    """Restricted or under-review suppliers. Returns (score, reasons, blocking)."""
+    rule = policy["vendors"].get(component["vendor"].lower())
+    if not rule:
+        return 0.0, [], False
+    tier = rule["risk_tier"].lower()
+    score = POLICY_SCORES.get(tier, 50.0)
+    blocking = rule["action"].lower() == "block"
+    return score, [f"Vendor '{component['vendor']}' is {tier}: {rule['justification']}"], blocking
+
+
+def dim_lifecycle(component):
+    eol = component["end_of_life"].lower()
+    score = EOL_SCORES.get(eol, EOL_SCORES["unknown"])
+    if eol == "yes":
+        return score, ["End of life - will receive no further security updates"]
+    if eol not in ("no",):
+        return score, ["Lifecycle status not declared by the supplier"]
+    return score, []
+
+
+def dim_geopolitical(component, policy):
+    country = component["country_of_origin"]
+    if country.lower() in UNKNOWN_VALUES:
+        return UNDECLARED_ORIGIN_SCORE, ["Country of origin not declared - provenance cannot be verified"]
+    rule = policy["countries"].get(country.lower())
+    if not rule:
+        return COUNTRY_TIER_SCORES["3"], [f"Origin '{country}' is not covered by the policy file"]
+    score = COUNTRY_TIER_SCORES.get(rule["risk_tier"], 40.0)
+    reasons = [] if score <= 10.0 else [f"Origin {country} is tier {rule['risk_tier']}: {rule['justification']}"]
+    return score, reasons
+
+
+def dim_operational(component, single_source_categories):
+    score, reasons = 0.0, []
+    alternative = component["validated_alternative"].lower()
+    if alternative == "no":
+        score += NO_ALTERNATIVE_SCORE
+        reasons.append("No validated alternative supplier has been qualified")
+    elif alternative in UNKNOWN_VALUES:
+        score += UNKNOWN_ALTERNATIVE_SCORE
+        reasons.append("Whether an alternative supplier exists has not been established")
+
+    if component["category"] in single_source_categories:
+        score += SINGLE_SOURCE_SCORE
+        reasons.append(f"Single-source dependency - '{component['category']}' is supplied "
+                       f"only by {component['vendor']}")
+
+    weeks = _number(component["lead_time_weeks"], None)
+    if weeks is not None:
+        if weeks >= LEAD_TIME_VERY_LONG_WEEKS:
+            score += LEAD_TIME_VERY_LONG_SCORE
+            reasons.append(f"Very long lead time - {int(weeks)} weeks")
+        elif weeks >= LEAD_TIME_LONG_WEEKS:
+            score += LEAD_TIME_LONG_SCORE
+            reasons.append(f"Long lead time - {int(weeks)} weeks")
+    return min(100.0, score), reasons
 
 
 # ---------------------------------------------------------------------------
-# Dimension 3 - component factors
+# Combining
 # ---------------------------------------------------------------------------
 def find_single_source_categories(bom):
     vendors = defaultdict(set)
@@ -349,286 +434,248 @@ def find_single_source_categories(bom):
     return {cat for cat, vs in vendors.items() if len(vs) == 1}
 
 
-def component_factors(component, single_source_categories):
-    reasons, score = [], 0.0
-    eol = component["end_of_life"].lower()
-    score += EOL_SCORES.get(eol, EOL_SCORES["unknown"])
-    if eol == "yes":
-        reasons.append("End of life - will receive no further security updates")
-    elif eol not in ("no",):
-        reasons.append("Lifecycle status not declared")
-
-    if component["category"] in single_source_categories:
-        score += SINGLE_SOURCE_SCORE
-        reasons.append(f"Single-source dependency - '{component['category']}' is supplied "
-                       f"only by {component['vendor']}")
-    return min(100.0, score), reasons
-
-
-# ---------------------------------------------------------------------------
-# Combining
-# ---------------------------------------------------------------------------
-def band_for(score):
-    for threshold, name in BANDS:
-        if score >= threshold:
-            return name
-    return "LOW"
-
-
-def suggest_mitigation(component, cve_matches, policy_blocking, factor_reasons, bom):
-    if cve_matches:
-        cwe = cve_matches[0]["cwe"].strip()
-        text = CWE_MITIGATIONS.get(cwe, DEFAULT_MITIGATION)
-        if cve_matches[0]["fix_available"].lower().startswith("y"):
-            text += " A fixed version is published by the vendor."
+def suggest_mitigation(component, cves, blocking, bom, dim_reasons):
+    if cves:
+        text = CWE_MITIGATIONS.get(cves[0]["cwe"].strip(), DEFAULT_MITIGATION)
+        if cves[0]["fix_available"].lower().startswith("y"):
+            fixed = first_fixed_version(cves[0]["version_affected"])
+            if fixed:
+                text += f" Upgrade to {fixed} or later."
         return text
-    if policy_blocking:
-        alternatives = sorted({
-            c["vendor"] for c in bom
-            if c["category"] == component["category"] and c["vendor"] != component["vendor"]
-        })
+    if blocking:
+        alternatives = sorted({c["vendor"] for c in bom
+                               if c["category"] == component["category"]
+                               and c["vendor"] != component["vendor"]})
         if alternatives:
-            return ("Vendor is blocked by policy. Substitute an approved supplier already in this "
-                    "BOM for the same category: " + ", ".join(alternatives) + ".")
-        return "Vendor is blocked by policy and no alternative supplier appears in this BOM. Re-tender this line item."
+            return ("Vendor is blocked by policy. Substitute an approved supplier already in "
+                    "this BOM for the same category: " + ", ".join(alternatives) + ".")
+        return "Vendor is blocked by policy and no alternative appears in this BOM. Re-tender this line item."
     if not is_identifiable(component):
-        return ("Obtain the vendor, model and version from the supplier before purchase. "
+        return ("Obtain vendor, model and version from the supplier before purchase. "
                 "Provenance that cannot be established cannot be assessed.")
-    if factor_reasons:
-        return ("Plan replacement before end of support, and qualify a second supplier "
-                "to remove the single-source dependency.")
+    if dim_reasons["operational"]:
+        return "Qualify and validate a second supplier to remove the single-source dependency."
+    if dim_reasons["lifecycle"]:
+        return "Plan replacement before end of support and confirm the successor part now."
     return "No action required. Re-assess if the component version changes."
 
 
 def score_component(component, cve_data, policy, bom, single_source_categories):
-    vuln_score, cve_matches, status = match_cves(component, cve_data)
-    policy_score, policy_reasons, blocking = apply_policy(component, policy)
-    factor_score, factor_reasons = component_factors(component, single_source_categories)
+    identifiable = is_identifiable(component)
+    scores, reasons = {}, {}
 
-    base = (W_VULNERABILITY * vuln_score
-            + W_POLICY * policy_score
-            + W_COMPONENT * factor_score)
+    if identifiable:
+        scores["vulnerability"], cves, reasons["vulnerability"] = dim_vulnerability(component, cve_data)
+    else:
+        scores["vulnerability"], cves, reasons["vulnerability"] = 0.0, [], []
+
+    scores["policy"], reasons["policy"], blocking = dim_policy(component, policy)
+    scores["lifecycle"], reasons["lifecycle"] = dim_lifecycle(component)
+    scores["geopolitical"], reasons["geopolitical"] = dim_geopolitical(component, policy)
+    scores["operational"], reasons["operational"] = dim_operational(component, single_source_categories)
+
     multiplier = CRITICALITY.get(component["category"], DEFAULT_CRITICALITY)
-    final = min(100.0, base * multiplier)
+    base = sum(WEIGHTS[d] * scores[d] for d in DIMENSIONS)
+    weighted = base * multiplier
+    floor = max((scores[d] * DOMINANCE for d in DOMINANT_DIMENSIONS), default=0.0)
+    final = min(100.0, max(weighted, floor))
+    driver = "weighted profile" if weighted >= floor else (
+        max(DOMINANT_DIMENSIONS, key=lambda d: scores[d]))
 
-    return {
+    result = {
         "component": component,
-        "vuln_score": vuln_score,
-        "policy_score": policy_score,
-        "factor_score": factor_score,
-        "base": base,
+        "identifiable": identifiable,
+        "status": "SCORED" if identifiable else "NOT SCORED",
+        "dimensions": {d: r1(scores[d]) for d in DIMENSIONS},
+        "dimension_reasons": {d: reasons[d] for d in DIMENSIONS},
+        "base": r1(base),
+        "weighted": r1(weighted),
+        "floor": r1(floor),
+        "driver": driver,
         "multiplier": multiplier,
-        "score": final,
-        "band": band_for(final),
-        "status": status,
-        "cves": cve_matches,
-        "reasons": policy_reasons + factor_reasons,
+        "cves": cves,
         "blocking": blocking,
-        "mitigation": suggest_mitigation(component, cve_matches, blocking, factor_reasons, bom),
+        "mitigation": suggest_mitigation(component, cves, blocking, bom, reasons),
     }
+    if identifiable:
+        result.update({"score": r1(final),
+                       "normalised": round(r1(final) / 100.0, 3),
+                       "band": band_for(final)})
+    else:
+        # Not scored, never zero. An unidentifiable component has not been cleared.
+        result.update({"score": None, "normalised": None, "band": "UNKNOWN"})
+    return result
 
 
-def concentration_risk(bom):
-    """A BOM can be low risk component by component and fragile as a portfolio."""
-    findings, penalty = [], 0.0
-    total = len(bom)
-
-    # Always report the origin spread, so the analysis is visible even when it
-    # does not breach the threshold. Only breaches carry a penalty.
+def concentration_analysis(bom):
+    findings, penalty, total = [], 0.0, len(bom)
     countries = Counter(c["country_of_origin"] for c in bom)
-    for country, count in countries.most_common(1):
-        share = count / total
-        if share > CONCENTRATION_THRESHOLD:
-            points = min(CONCENTRATION_MAX, (share - CONCENTRATION_THRESHOLD) * 50.0)
-            penalty += points
-            findings.append(f"BREACH: {count} of {total} components ({share:.0%}) originate in "
-                            f"{country} - above the {CONCENTRATION_THRESHOLD:.0%} threshold")
-        else:
-            findings.append(f"Largest single origin is {country} at {count} of {total} "
-                            f"({share:.0%}) - within the {CONCENTRATION_THRESHOLD:.0%} threshold")
+    top_country, top_count = countries.most_common(1)[0]
+    share = top_count / total
+    if share > CONCENTRATION_THRESHOLD:
+        penalty += min(CONCENTRATION_MAX, (share - CONCENTRATION_THRESHOLD) * 50.0)
+        findings.append(f"BREACH: {top_count} of {total} components ({share:.0%}) originate in "
+                        f"{top_country} - above the {CONCENTRATION_THRESHOLD:.0%} threshold")
+    else:
+        findings.append(f"Largest single origin is {top_country} at {top_count} of {total} "
+                        f"({share:.0%}) - within the {CONCENTRATION_THRESHOLD:.0%} threshold")
 
     undeclared = sum(1 for c in bom if c["country_of_origin"].lower() in UNKNOWN_VALUES)
     if undeclared:
-        findings.append(f"{undeclared} of {total} components ({undeclared/total:.0%}) do not "
-                        f"declare a country of origin, so true concentration may be higher")
+        findings.append(f"{undeclared} of {total} components ({undeclared/total:.0%}) do not declare "
+                        f"an origin, so true concentration may be higher")
 
     vendors = defaultdict(set)
-    for component in bom:
-        vendors[component["category"]].add(component["vendor"])
+    for c in bom:
+        vendors[c["category"]].add(c["vendor"])
     for category in sorted(CRITICAL_CATEGORIES & set(vendors)):
         if len(vendors[category]) == 1:
             penalty += 5.0
-            sole_vendor = next(iter(vendors[category]))
             findings.append(f"All '{category}' components come from a single vendor "
-                            f"({sole_vendor}) - no second source")
-
-    return min(CONCENTRATION_MAX, penalty), findings
+                            f"({next(iter(vendors[category]))}) - no second source")
+    return min(CONCENTRATION_MAX, penalty), findings, countries
 
 
 def score_bom(scored, bom):
     total = len(scored)
-    weighted_sum = sum(r["score"] * r["multiplier"] for r in scored)
-    weight_total = sum(r["multiplier"] for r in scored) or 1.0
-    mean = weighted_sum / weight_total
+    unknown = [r for r in scored if not r["identifiable"]]
+    rated = [r for r in scored if r["identifiable"]]
 
-    penalty, concentration_findings = concentration_risk(bom)
-    overall = min(100.0, mean + penalty)
+    weighted = sum(r["score"] * r["multiplier"] for r in rated)
+    weights = sum(r["multiplier"] for r in rated) or 1.0
+    mean = weighted / weights
 
-    unverified = [r for r in scored if r["status"] == "UNVERIFIED"]
-    coverage = (total - len(unverified)) / total if total else 0.0
+    penalty, concentration, countries = concentration_analysis(bom)
+    worst = max((r["score"] for r in rated), default=0.0)
+    portfolio = mean + penalty
+    overall = min(100.0, max(portfolio, worst * WORST_COMPONENT_FLOOR))
+    coverage = len(rated) / total if total else 0.0
 
-    blocked = [r for r in scored if r["blocking"]]
-    criticals = [r for r in scored if r["band"] == "CRITICAL"]
+    blocked = [r for r in rated if r["blocking"]]
+    criticals = [r for r in rated if r["band"] == "CRITICAL"]
+    highs = [r for r in rated if r["band"] == "HIGH"]
 
     if blocked:
-        verdict = "REJECT"
+        verdict, banner = "REJECT", "PROCUREMENT REVIEW REQUIRED"
         rationale = (f"{len(blocked)} component(s) come from a vendor blocked by procurement policy. "
                      "A restricted supplier is a compliance decision, not a risk trade-off.")
-    elif criticals or coverage < 0.90:
-        verdict = "APPROVE WITH CONDITIONS"
+    elif criticals or coverage < COVERAGE_TARGET:
+        verdict, banner = "APPROVE WITH CONDITIONS", "ACCEPTABLE WITH MITIGATIONS"
         parts = []
         if criticals:
             parts.append(f"{len(criticals)} component(s) score CRITICAL and must be remediated before deployment")
-        if coverage < 0.90:
-            parts.append(f"provenance could not be established for {len(unverified)} component(s)")
+        if coverage < COVERAGE_TARGET:
+            parts.append(f"provenance could not be established for {len(unknown)} component(s)")
         rationale = "; ".join(parts).capitalize() + "."
     else:
-        verdict = "APPROVE"
-        rationale = "No blocking policy findings, no critical components, and provenance is established for at least 90% of the BOM."
+        verdict, banner = "APPROVE", "ACCEPTABLE"
+        rationale = ("No blocking policy findings, no critical components, and provenance "
+                     f"established for at least {COVERAGE_TARGET:.0%} of the BOM.")
+
+    dimension_means = {}
+    for d in DIMENSIONS:
+        values = [r["dimensions"][d] for r in rated]
+        dimension_means[d] = r1(sum(values) / len(values)) if values else 0.0
 
     return {
-        "total": total,
-        "overall": overall,
-        "mean": mean,
-        "penalty": penalty,
-        "concentration": concentration_findings,
-        "coverage": coverage,
-        "unverified": unverified,
-        "blocked": blocked,
-        "criticals": criticals,
-        "verdict": verdict,
-        "rationale": rationale,
+        "total": total, "rated": len(rated), "unknown": unknown,
+        "overall": r1(overall), "normalised": round(r1(overall) / 100.0, 3),
+        "band": band_for(overall), "mean": r1(mean), "penalty": r1(penalty),
+        "portfolio": r1(portfolio), "worst": r1(worst),
+        "overall_driver": "worst component" if worst * WORST_COMPONENT_FLOOR > portfolio else "portfolio profile",
+        "concentration": concentration, "countries": countries,
+        "coverage": coverage, "blocked": blocked, "criticals": criticals, "highs": highs,
+        "verdict": verdict, "banner": banner, "rationale": rationale,
         "band_counts": Counter(r["band"] for r in scored),
+        "dimension_means": dimension_means,
     }
 
 
-# ---------------------------------------------------------------------------
-# Remediation simulator
-#
-# Scoring a BOM tells procurement what is wrong. It does not tell them what to
-# do about it, or what it would buy them. The simulator answers the question a
-# buyer actually asks: what is the smallest set of changes that makes this
-# purchase acceptable?
-# ---------------------------------------------------------------------------
-EFFORT_ORDER = {"low": 0, "medium": 1, "high": 2}
-VERDICT_RANK = {"REJECT": 0, "APPROVE WITH CONDITIONS": 1, "APPROVE": 2}
-
-
-def verdict_distance(summary):
-    """How far this BOM is from APPROVE, as the three conditions that decide it.
-
-    Compared lexicographically, lower is better: clear the blocking vendors
-    first, then the CRITICAL components, then the coverage shortfall.
-    (0, 0, 0.0) means the BOM meets every approval condition.
-    """
-    return (len(summary["blocked"]),
-            len(summary["criticals"]),
-            round(max(0.0, 0.90 - summary["coverage"]), 4))
-
-
 def score_all(bom, cve_data, policy):
-    """Full pipeline. Used for the baseline and for every simulated variant."""
     single_source = find_single_source_categories(bom)
     scored = [score_component(c, cve_data, policy, bom, single_source) for c in bom]
     return scored, score_bom(scored, bom)
 
 
+# ---------------------------------------------------------------------------
+# Remediation simulator
+# ---------------------------------------------------------------------------
+EFFORT_ORDER = {"low": 0, "medium": 1, "high": 2}
+
+
+def verdict_distance(summary):
+    """Lexicographic distance to APPROVE: blockers, then criticals, then coverage."""
+    return (len(summary["blocked"]), len(summary["criticals"]),
+            round(max(0.0, COVERAGE_TARGET - summary["coverage"]), 4))
+
+
 def build_remediation_actions(scored, bom, policy):
-    """Derive candidate fixes from the findings themselves."""
     actions = []
     for result in scored:
         component = result["component"]
         cid = component["component_id"]
 
-        # 1. PATCH - a fixed version exists for every matched CVE
-        fixed_targets = []
-        for cve in result["cves"]:
-            if not cve["fix_available"].lower().startswith("y"):
-                continue
-            target = first_fixed_version(cve["version_affected"])
-            if target:
-                fixed_targets.append(target)
-        if fixed_targets:
-            highest = fixed_targets[0]
-            for candidate in fixed_targets[1:]:
+        targets = [first_fixed_version(c["version_affected"]) for c in result["cves"]
+                   if c["fix_available"].lower().startswith("y")]
+        targets = [t for t in targets if t]
+        if targets:
+            highest = targets[0]
+            for candidate in targets[1:]:
                 if (compare_versions(candidate, highest) or 0) > 0:
                     highest = candidate
             actions.append({
                 "type": "PATCH", "component_id": cid, "effort": "low",
                 "label": f"Update {component['vendor']} {component['model']} to {highest}",
                 "detail": "Resolves " + ", ".join(c["cve_id"] for c in result["cves"]),
-                "change": {"version": highest},
-            })
+                "change": {"version": highest}})
 
-        # 2. REPLACE VENDOR - blocked by policy, substitute an approved supplier
         if result["blocking"]:
-            alternatives = [
-                c for c in bom
-                if c["category"] == component["category"]
-                and c["vendor"] != component["vendor"]
-                and c["vendor"].lower() not in policy["vendors"]
-            ]
-            if alternatives:
-                pick = sorted(alternatives, key=lambda c: c["vendor"])[0]
+            alts = [c for c in bom if c["category"] == component["category"]
+                    and c["vendor"] != component["vendor"]
+                    and c["vendor"].lower() not in policy["vendors"]]
+            if alts:
+                pick = sorted(alts, key=lambda c: c["vendor"])[0]
                 actions.append({
                     "type": "REPLACE", "component_id": cid, "effort": "high",
                     "label": f"Re-source {component['component_name']} from {pick['vendor']}",
                     "detail": f"{component['vendor']} is blocked by procurement policy",
                     "change": {"vendor": pick["vendor"], "model": pick["model"],
                                "version": pick["version"],
-                               "country_of_origin": pick["country_of_origin"]},
-                })
+                               "country_of_origin": pick["country_of_origin"]}})
 
-        # 3. REFRESH - end of life, replace with a supported generation
         if component["end_of_life"].lower() == "yes":
             actions.append({
                 "type": "REFRESH", "component_id": cid, "effort": "high",
                 "label": f"Replace end-of-life {component['component_name']} with a supported generation",
                 "detail": "Receives no further security updates in its current form",
-                "change": {"end_of_life": "no"},
-            })
+                "change": {"end_of_life": "no"}})
 
-        # 4. IDENTIFY - obtain provenance from the supplier.
-        # Only fills in what is actually missing. Overwriting a field that is
-        # already known would silently discard a real finding: a component can
-        # be from a blocked vendor AND have no declared version, and obtaining
-        # the version does not make the vendor acceptable.
-        if result["status"] == "UNVERIFIED":
+        if component["validated_alternative"].lower() in {"no"} | UNKNOWN_VALUES:
+            actions.append({
+                "type": "QUALIFY", "component_id": cid, "effort": "medium",
+                "label": f"Qualify a second supplier for {component['component_name']}",
+                "detail": "No validated alternative source",
+                "change": {"validated_alternative": "yes"}})
+
+        if not result["identifiable"]:
             change, missing = {}, []
-            if component["vendor"].lower() in UNKNOWN_VALUES:
-                change["vendor"] = "(declared by supplier)"
-                missing.append("vendor")
-            if component["model"].lower() in UNKNOWN_VALUES:
-                change["model"] = component["component_name"]
-                missing.append("model")
-            if component["version"].lower() in UNKNOWN_VALUES:
-                change["version"] = "1.0"
-                missing.append("version")
-            if component["country_of_origin"].lower() in UNKNOWN_VALUES:
-                change["country_of_origin"] = "(declared by supplier)"
-                missing.append("country of origin")
+            for field, placeholder in (("vendor", "(declared by supplier)"),
+                                       ("model", component["component_name"]),
+                                       ("version", "1.0"),
+                                       ("country_of_origin", "(declared by supplier)")):
+                if component[field].lower() in UNKNOWN_VALUES:
+                    change[field] = placeholder
+                    missing.append(field.replace("_", " "))
             if change:
                 actions.append({
                     "type": "IDENTIFY", "component_id": cid, "effort": "low",
                     "label": f"Obtain {', '.join(missing)} for {component['component_name']} from the supplier",
                     "detail": "Provenance cannot currently be established",
-                    "change": change,
-                })
+                    "change": change})
     return actions
 
 
 def apply_actions(bom, actions):
-    """Return a copy of the BOM with the given actions applied."""
     changes = {}
     for action in actions:
         changes.setdefault(action["component_id"], {}).update(action["change"])
@@ -636,239 +683,118 @@ def apply_actions(bom, actions):
 
 
 def remediation_plan(bom, cve_data, policy, baseline_scored, baseline_summary):
-    """Independent impact of each action, then the smallest plan reaching APPROVE."""
     candidates = build_remediation_actions(baseline_scored, bom, policy)
     baseline = baseline_summary["overall"]
-
-    # Independent impact: what does this one action save on its own?
     for action in candidates:
         _, trial = score_all(apply_actions(bom, [action]), cve_data, policy)
-        action["saving"] = baseline - trial["overall"]
-        action["unblocks"] = trial["verdict"] != baseline_summary["verdict"]
+        action["saving"] = r1(baseline - trial["overall"])
 
-    # Goal-directed greedy, not greedy-on-score.
-    #
-    # The verdict is decided by three rules - a blocking vendor, any CRITICAL
-    # component, and coverage below 90% - so the smallest useful plan is the one
-    # that clears those conditions. Ranking by points saved produces a longer
-    # plan full of actions that lower the number without moving the decision.
-    # We therefore rank by DISTANCE to the approval conditions, and only take an
-    # action if it actually shortens that distance. Ties break on score saved,
-    # then on lower effort.
-    remaining = list(candidates)
-    applied, steps = [], []
+    remaining, applied, steps = list(candidates), [], []
     current = baseline_summary
     while remaining and current["verdict"] != "APPROVE":
-        here = verdict_distance(current)
-        best = None
+        here, best = verdict_distance(current), None
         for action in remaining:
             _, trial = score_all(apply_actions(bom, applied + [action]), cve_data, policy)
             key = (verdict_distance(trial), trial["overall"], EFFORT_ORDER[action["effort"]])
             if best is None or key < best[0]:
                 best = (key, action, trial)
         (distance, _, _), action, trial = best
-        if distance >= here:          # nothing left moves the decision along
+        if distance >= here:
             break
-        applied.append(action)
-        remaining.remove(action)
-        current = trial
+        applied.append(action); remaining.remove(action); current = trial
         steps.append({"action": action, "score": current["overall"],
-                      "verdict": current["verdict"], "coverage": current["coverage"]})
+                      "verdict": current["verdict"], "coverage": round(current["coverage"], 3),
+                      "worst": current["worst"]})
 
+    return {"candidates": sorted(candidates, key=lambda a: (-a["saving"], a["component_id"])),
+            "steps": steps, "baseline_score": baseline,
+            "baseline_verdict": baseline_summary["verdict"],
+            "final_score": current["overall"], "final_verdict": current["verdict"],
+            "reached_approve": current["verdict"] == "APPROVE"}
+
+
+# ---------------------------------------------------------------------------
+# Serialisation - the dashboard consumes this
+# ---------------------------------------------------------------------------
+def to_payload(scored, summary, plan, sources, notes, bom, cve_data, policy):
     return {
-        "candidates": sorted(candidates, key=lambda a: (-a["saving"], a["component_id"])),
-        "steps": steps,
-        "baseline_score": baseline,
-        "baseline_verdict": baseline_summary["verdict"],
-        "final_score": current["overall"],
-        "final_verdict": current["verdict"],
-        "reached_approve": current["verdict"] == "APPROVE",
+        # The dashboard re-scores this in the browser so the what-if simulator
+        # can recalculate live, and so a different BOM can be uploaded.
+        "raw": {"bom": bom, "cves": cve_data, "policy": policy},
+        "meta": {"sources": sources, "notes": notes,
+                 "weights": WEIGHTS, "criticality": CRITICALITY,
+                 "dimension_labels": DIMENSION_LABELS,
+                 "coverage_target": COVERAGE_TARGET,
+                 "bands": BANDS,
+                 "cwe_mitigations": CWE_MITIGATIONS,
+                 "default_mitigation": DEFAULT_MITIGATION},
+        "summary": {
+            "total": summary["total"], "rated": summary["rated"],
+            "overall": summary["overall"], "normalised": summary["normalised"],
+            "band": summary["band"], "mean": summary["mean"], "penalty": summary["penalty"],
+            "portfolio": summary["portfolio"], "worst": summary["worst"],
+            "overall_driver": summary["overall_driver"],
+            "coverage": round(summary["coverage"], 4),
+            "verdict": summary["verdict"], "banner": summary["banner"],
+            "rationale": summary["rationale"],
+            "counts": {k: summary["band_counts"].get(k, 0)
+                       for k in ("CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN")},
+            "dimension_means": summary["dimension_means"],
+            "concentration": summary["concentration"],
+            "countries": dict(summary["countries"]),
+            "unknown_ids": [r["component"]["component_id"] for r in summary["unknown"]],
+            "blocked_ids": [r["component"]["component_id"] for r in summary["blocked"]],
+            "cve_count": sum(len(r["cves"]) for r in scored),
+            "restricted_vendors": sorted({r["component"]["vendor"] for r in summary["blocked"]}),
+        },
+        "components": [{
+            "id": r["component"]["component_id"], "name": r["component"]["component_name"],
+            "category": r["component"]["category"], "vendor": r["component"]["vendor"],
+            "model": r["component"]["model"], "version": r["component"]["version"],
+            "country": r["component"]["country_of_origin"], "quantity": r["component"]["quantity"],
+            "end_of_life": r["component"]["end_of_life"],
+            "lead_time_weeks": r["component"]["lead_time_weeks"],
+            "validated_alternative": r["component"]["validated_alternative"],
+            "score": r["score"], "normalised": r["normalised"], "band": r["band"],
+            "status": r["status"], "base": r["base"], "multiplier": r["multiplier"],
+            "weighted": r["weighted"], "floor": r["floor"], "driver": r["driver"],
+            "dimensions": r["dimensions"],
+            "reasons": {d: r["dimension_reasons"][d] for d in DIMENSIONS},
+            "blocking": r["blocking"], "mitigation": r["mitigation"],
+            "cves": [{"id": c["cve_id"], "cvss": _number(c["cvss_score"], 0.0),
+                      "severity": c["severity"], "source": c["score_source"],
+                      "cwe": c["cwe"], "kev": c["kev"],
+                      "epss": _number(c["epss"], None),
+                      "epss_percentile": _number(c["epss_percentile"], None),
+                      "description": c["description"],
+                      "fix": c["fix_available"]} for c in r["cves"]],
+        } for r in scored],
+        "plan": {
+            "baseline_score": plan["baseline_score"], "baseline_verdict": plan["baseline_verdict"],
+            "final_score": plan["final_score"], "final_verdict": plan["final_verdict"],
+            "reached_approve": plan["reached_approve"],
+            "steps": [{"type": s["action"]["type"], "component_id": s["action"]["component_id"],
+                       "label": s["action"]["label"], "detail": s["action"]["detail"],
+                       "effort": s["action"]["effort"], "score": s["score"],
+                       "verdict": s["verdict"], "coverage": s["coverage"],
+                       "worst": s["worst"]} for s in plan["steps"]],
+            "candidates": [{"type": a["type"], "component_id": a["component_id"],
+                            "label": a["label"], "detail": a["detail"], "effort": a["effort"],
+                            "saving": a["saving"], "change": a["change"]}
+                           for a in plan["candidates"]],
+        } if plan else None,
     }
-
-
-# ---------------------------------------------------------------------------
-# Report
-# ---------------------------------------------------------------------------
-CSS = """
-body{font-family:Segoe UI,Helvetica,Arial,sans-serif;margin:0;background:#f4f6f8;color:#1c2733}
-.wrap{max-width:1080px;margin:0 auto;padding:32px 24px 64px}
-h1{margin:0 0 4px;font-size:26px}
-h2{margin:36px 0 12px;font-size:18px;border-bottom:2px solid #d7dee5;padding-bottom:6px}
-.sub{color:#5b6b7a;margin:0 0 24px}
-.verdict{padding:18px 22px;border-radius:8px;color:#fff;margin:0 0 24px}
-.REJECT{background:#8e1b1b}.APPROVEWITHCONDITIONS{background:#9a6212}.APPROVE{background:#1d6b3a}
-.verdict b{font-size:20px;display:block;margin-bottom:6px}
-.cards{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px}
-.card{background:#fff;border:1px solid #dde3e9;border-radius:8px;padding:14px 18px;min-width:150px;flex:1}
-.card .n{font-size:24px;font-weight:700}
-.card .l{color:#5b6b7a;font-size:12px;text-transform:uppercase;letter-spacing:.5px}
-table{width:100%;border-collapse:collapse;background:#fff;font-size:14px}
-th,td{text-align:left;padding:9px 11px;border-bottom:1px solid #e6ebef;vertical-align:top}
-th{background:#eef2f5;font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:#44535f}
-.badge{display:inline-block;padding:2px 8px;border-radius:11px;font-size:11px;font-weight:700;color:#fff}
-.b-CRITICAL{background:#8e1b1b}.b-HIGH{background:#c05621}.b-MEDIUM{background:#9a7d12}.b-LOW{background:#4a5a68}
-.mono{font-family:Consolas,monospace;font-size:12px;color:#44535f}
-.mit{color:#25506e;font-size:13px}
-.note{background:#fff;border-left:4px solid #9a6212;padding:12px 16px;margin:12px 0;font-size:14px}
-footer{margin-top:44px;color:#6b7986;font-size:12px;border-top:1px solid #d7dee5;padding-top:14px}
-"""
-
-
-def _e(text):
-    return html.escape(str(text))
-
-
-def _remediation_section(plan):
-    p = ["<h2>Remediation plan</h2>"]
-    if plan["reached_approve"]:
-        p.append(f"<p class='sub'>{len(plan['steps'])} action(s) take this bill of materials from "
-                 f"<b>{_e(plan['baseline_verdict'])}</b> at {plan['baseline_score']:.1f} to "
-                 f"<b>APPROVE</b> at {plan['final_score']:.1f}.</p>")
-    else:
-        p.append(f"<p class='sub'>No combination of the available actions reaches APPROVE. "
-                 f"Best achievable: <b>{_e(plan['final_verdict'])}</b> at "
-                 f"{plan['final_score']:.1f}, down from {plan['baseline_score']:.1f}.</p>")
-
-    if plan["steps"]:
-        p.append("<table><tr><th>Step</th><th>Action</th><th>Component</th>"
-                 "<th>Effort</th><th>Score after</th><th>Verdict after</th></tr>")
-        for i, step in enumerate(plan["steps"], 1):
-            a = step["action"]
-            p.append(f"<tr><td class='mono'>{i}</td>"
-                     f"<td><span class='badge b-LOW'>{_e(a['type'])}</span> {_e(a['label'])}<br>"
-                     f"<span class='mono'>{_e(a['detail'])}</span></td>"
-                     f"<td class='mono'>{_e(a['component_id'])}</td>"
-                     f"<td class='mono'>{_e(a['effort'])}</td>"
-                     f"<td class='mono'>{step['score']:.1f}</td>"
-                     f"<td class='mono'>{_e(step['verdict'])}</td></tr>")
-        p.append("</table>")
-
-    others = [a for a in plan["candidates"] if a not in [s["action"] for s in plan["steps"]]]
-    if others:
-        p.append("<h2>Other available actions, by individual impact</h2>")
-        p.append("<p class='sub'>Each figure is the reduction that action delivers on its own, "
-                 "measured against the unremediated baseline.</p>")
-        p.append("<table><tr><th>Saving</th><th>Action</th><th>Component</th><th>Effort</th></tr>")
-        for a in others[:12]:
-            p.append(f"<tr><td class='mono'>-{a['saving']:.1f}</td>"
-                     f"<td>{_e(a['label'])}</td><td class='mono'>{_e(a['component_id'])}</td>"
-                     f"<td class='mono'>{_e(a['effort'])}</td></tr>")
-        p.append("</table>")
-
-    p.append("<div class='note'>The IDENTIFY action models the best case: that the supplier "
-             "provides provenance and the component proves to have no known vulnerability. "
-             "If provenance instead reveals a vulnerable part, the score will not improve by "
-             "the amount shown. Patching and re-sourcing are modelled exactly.</div>")
-    return p
-
-
-def write_report(scored, summary, out_path, sources, plan=None):
-    ranked = sorted(scored, key=lambda r: (-r["score"], -r["base"], r["component"]["component_id"]))
-    findings = [r for r in ranked if r["score"] > 0]
-    unverified = sorted(summary["unverified"], key=lambda r: r["component"]["component_id"])
-
-    p = []
-    p.append(f"<style>{CSS}</style><div class='wrap'>")
-    p.append("<h1>Supply Chain Risk Assessment</h1>")
-    p.append(f"<p class='sub'>Bill of materials: <span class='mono'>{_e(sources['bom'])}</span> "
-             f"&middot; {summary['total']} components assessed</p>")
-
-    cls = summary["verdict"].replace(" ", "")
-    p.append(f"<div class='verdict {cls}'><b>{_e(summary['verdict'])}</b>{_e(summary['rationale'])}</div>")
-
-    p.append("<div class='cards'>")
-    for label, value in [
-        ("Overall BOM risk", f"{summary['overall']:.1f}/100"),
-        ("Coverage", f"{summary['coverage']:.0%}"),
-        ("Critical", summary["band_counts"].get("CRITICAL", 0)),
-        ("High", summary["band_counts"].get("HIGH", 0)),
-        ("Unverifiable", len(summary["unverified"])),
-    ]:
-        p.append(f"<div class='card'><div class='n'>{_e(value)}</div><div class='l'>{_e(label)}</div></div>")
-    p.append("</div>")
-
-    if summary["concentration"]:
-        p.append("<h2>Concentration risk</h2>")
-        p.append(f"<p class='sub'>Portfolio-level exposure. Adds {summary['penalty']:.1f} points "
-                 f"to the overall score of {summary['mean']:.1f}.</p>")
-        for finding in summary["concentration"]:
-            p.append(f"<div class='note'>{_e(finding)}</div>")
-
-    p.append("<h2>Findings, highest risk first</h2>")
-    p.append("<table><tr><th>Score</th><th>Component</th><th>Why</th>"
-             "<th>Breakdown</th><th>Mitigation or alternative</th></tr>")
-    for r in findings:
-        c = r["component"]
-        why = []
-        for cve in r["cves"]:
-            why.append(f"<b>{_e(cve['cve_id'])}</b> &middot; CVSS {_e(cve['cvss_score'])} "
-                       f"{_e(cve['severity'])} ({_e(cve['score_source'])}) &middot; {_e(cve['cwe'])}<br>"
-                       f"{_e(cve['description'])}")
-        why.extend(_e(x) for x in r["reasons"])
-        if r["status"] == "UNVERIFIED":
-            why.insert(0, "<b>Cannot be identified</b> - vendor, model or version not declared")
-        p.append(
-            f"<tr><td><span class='badge b-{r['band']}'>{r['score']:.1f}</span><br>"
-            f"<span class='mono'>{_e(r['band'])}</span></td>"
-            f"<td><b>{_e(c['component_id'])}</b> {_e(c['component_name'])}<br>"
-            f"<span class='mono'>{_e(c['vendor'])} {_e(c['model'])} {_e(c['version'])}<br>"
-            f"{_e(c['category'])} &middot; {_e(c['country_of_origin'])} &middot; qty {_e(c['quantity'])}</span></td>"
-            f"<td>{'<br>'.join(why) if why else '-'}</td>"
-            f"<td class='mono'>vuln {r['vuln_score']:.0f}&times;{W_VULNERABILITY}<br>"
-            f"policy {r['policy_score']:.0f}&times;{W_POLICY}<br>"
-            f"factors {r['factor_score']:.0f}&times;{W_COMPONENT}<br>"
-            f"= {r['base']:.1f} &times; {r['multiplier']} ({_e(c['category'])})</td>"
-            f"<td class='mit'>{_e(r['mitigation'])}</td></tr>")
-    p.append("</table>")
-
-    p.append("<h2>Components that could not be verified</h2>")
-    p.append("<p class='sub'>These are <b>not</b> scored as safe. An absence of known vulnerabilities "
-             "for a component we cannot identify is an absence of evidence, not evidence of absence. "
-             f"Each carries a defined uncertainty penalty of {UNVERIFIED_PENALTY:.0f}/100 "
-             "on the vulnerability dimension.</p>")
-    if unverified:
-        p.append("<table><tr><th>ID</th><th>Component</th><th>Vendor</th><th>Version</th><th>Origin</th></tr>")
-        for r in unverified:
-            c = r["component"]
-            p.append(f"<tr><td class='mono'>{_e(c['component_id'])}</td><td>{_e(c['component_name'])}</td>"
-                     f"<td>{_e(c['vendor'])}</td><td class='mono'>{_e(c['version'])}</td>"
-                     f"<td>{_e(c['country_of_origin'])}</td></tr>")
-        p.append("</table>")
-    else:
-        p.append("<p>All components were identifiable.</p>")
-
-    if plan:
-        p.extend(_remediation_section(plan))
-
-    p.append("<h2>Method</h2><table>"
-             "<tr><th>Dimension</th><th>Weight</th><th>Source</th></tr>"
-             f"<tr><td>Known vulnerabilities</td><td>{W_VULNERABILITY}</td>"
-             f"<td class='mono'>{_e(sources['cves'])} &middot; NVD CVSS 3.1 base scores</td></tr>"
-             f"<tr><td>Origin and vendor policy</td><td>{W_POLICY}</td>"
-             f"<td class='mono'>{_e(sources['policy'])} &middot; organisation-supplied</td></tr>"
-             f"<tr><td>Component factors</td><td>{W_COMPONENT}</td>"
-             "<td>End-of-life status and single-source dependency</td></tr></table>")
-    p.append("<p class='sub' style='margin-top:12px'>Scores are a prioritisation index on a 0-100 scale, "
-             "not a probability of compromise. Category criticality multipliers range from 0.8 to 1.5.</p>")
-
-    p.append(f"<footer>Team Shadow Djinn &middot; School of Cyber Defense 2026 &middot; "
-             f"generated {datetime.now():%Y-%m-%d %H:%M}</footer></div>")
-
-    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
-    with open(out_path, "w", encoding="utf-8") as fh:
-        fh.write("\n".join(p))
 
 
 # ---------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(
-        description="Score an AI server bill of materials for supply-chain risk.")
+        description="BOMShield - score an AI server bill of materials for supply-chain risk.")
     parser.add_argument("--bom", default=DEFAULT_BOM)
     parser.add_argument("--cves", default=DEFAULT_CVES)
     parser.add_argument("--policy", default=DEFAULT_POLICY)
-    parser.add_argument("--out", default=DEFAULT_OUT)
-    parser.add_argument("--no-simulate", action="store_true",
-                        help="skip the remediation simulator")
+    parser.add_argument("--outdir", default=DEFAULT_OUTDIR)
+    parser.add_argument("--no-simulate", action="store_true", help="skip the remediation simulator")
     args = parser.parse_args()
 
     try:
@@ -884,16 +810,35 @@ def main():
 
     scored, summary = score_all(bom, cve_data, policy)
     plan = None if args.no_simulate else remediation_plan(bom, cve_data, policy, scored, summary)
-    write_report(scored, summary, args.out,
-                 {"bom": args.bom, "cves": args.cves, "policy": args.policy}, plan)
+    payload = to_payload(scored, summary, plan,
+                         {"bom": args.bom, "cves": args.cves, "policy": args.policy}, notes,
+                         bom, cve_data, policy)
 
-    print(f"\n  Components assessed : {summary['total']}")
-    print(f"  Overall BOM risk    : {summary['overall']:.1f}/100")
-    print(f"  Coverage            : {summary['coverage']:.0%} "
-          f"({len(summary['unverified'])} could not be verified)")
-    print(f"  Verdict             : {summary['verdict']}")
-    print(f"  {summary['rationale']}\n")
-    for r in sorted(scored, key=lambda r: -r["score"])[:5]:
+    os.makedirs(args.outdir, exist_ok=True)
+    json_path = os.path.join(args.outdir, "data.json")
+    with open(json_path, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, indent=2)
+
+    from dashboard import write_dashboard, write_static_report
+    dash_path = os.path.join(args.outdir, "dashboard.html")
+    report_path = os.path.join(args.outdir, "report.html")
+    write_dashboard(payload, dash_path)
+    write_static_report(payload, report_path)
+
+    print(f"\n  BOMSHIELD - {os.path.basename(args.bom)}")
+    print(f"  Overall BOM risk    : {summary['overall']}/100  ({summary['normalised']}) "
+          f"{summary['band']}")
+    print(f"  Components          : {summary['total']}  scored {summary['rated']}, "
+          f"not scored {len(summary['unknown'])}")
+    print(f"  Data confidence     : {summary['coverage']:.0%}")
+    print(f"  Verdict             : {summary['verdict']}  -  {summary['banner']}")
+    print(f"  {summary['rationale']}")
+    print("\n  Dimension means:")
+    for d in DIMENSIONS:
+        print(f"    {DIMENSION_LABELS[d]:<16} {summary['dimension_means'][d]:>5}  (weight {WEIGHTS[d]})")
+    print("\n  Highest risk:")
+    for r in sorted((x for x in scored if x["score"] is not None),
+                    key=lambda r: -r["score"])[:5]:
         cves = ", ".join(c["cve_id"] for c in r["cves"]) or "-"
         print(f"    {r['score']:5.1f}  {r['band']:<8} {r['component']['component_id']}  "
               f"{r['component']['vendor']} {r['component']['model']}  {cves}")
@@ -901,17 +846,18 @@ def main():
     if plan:
         print(f"\n  REMEDIATION PLAN")
         if plan["reached_approve"]:
-            print(f"  {len(plan['steps'])} action(s) take this BOM from {plan['baseline_verdict']} "
-                  f"({plan['baseline_score']:.1f}) to APPROVE ({plan['final_score']:.1f})")
+            print(f"  {len(plan['steps'])} action(s): {plan['baseline_verdict']} "
+                  f"({plan['baseline_score']}) -> APPROVE ({plan['final_score']})")
         else:
-            print(f"  Best achievable is {plan['final_verdict']} ({plan['final_score']:.1f}), "
-                  f"down from {plan['baseline_score']:.1f}")
+            print(f"  Best achievable {plan['final_verdict']} ({plan['final_score']}), "
+                  f"from {plan['baseline_score']}")
         for i, step in enumerate(plan["steps"], 1):
-            a = step["action"]
-            print(f"    {i}. [{a['type']:<8}] {a['label']}")
-            print(f"       -> {step['score']:.1f}  {step['verdict']}")
+            print(f"    {i}. [{step['action']['type']:<8}] {step['action']['label']}")
+            print(f"       -> risk {step['score']}  confidence {step['coverage']:.0%}  {step['verdict']}")
 
-    print(f"\n  Report written to {args.out}\n")
+    print(f"\n  Dashboard : {dash_path}")
+    print(f"  Report    : {report_path}")
+    print(f"  Data      : {json_path}\n")
     return 0
 
 
