@@ -47,6 +47,23 @@ body.tuned #modBadge{display:inline-block}
 #sumText{white-space:pre-wrap;font-family:Consolas,ui-monospace,monospace;font-size:12.5px;
   line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:9px;
   padding:15px 17px;margin-top:12px;max-height:340px;overflow:auto}
+
+.vd{border-radius:9px;padding:12px 14px}
+.vd small{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.7px;opacity:.85}
+.vd strong{font-size:20px;display:block;margin-top:3px}
+.vd-REJECT{background:#3a1517;border:1px solid #8c2f35;color:#ffc9cd}
+.vd-CONDITIONAL{background:#3a2c0d;border:1px solid #8c6c1e;color:#ffe3ad}
+.vd-APPROVE{background:#123227;border:1px solid #2c7d57;color:#a9efcd}
+.rk-CRITICAL{background:#3a1517;border:1px solid #8c2f35;color:#ffc9cd}
+.rk-HIGH{background:#3a2410;border:1px solid #8c5a20;color:#ffd6ad}
+.rk-MEDIUM{background:#3a340d;border:1px solid #8c7d1e;color:#f4eeb0}
+.rk-LOW{background:#123227;border:1px solid #2c7d57;color:#a9efcd}
+.projRow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:6px 0 4px}
+.projHead{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:16px 0 4px}
+.arrowUp{color:var(--red);font-weight:700}
+.arrowDown{color:var(--green);font-weight:700}
+#simStats .simCell{background:var(--panel2);border-radius:9px;padding:11px 13px}#simStats .simCell small{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}#simStats .simCell strong{display:block;font-size:19px;margin-top:3px}#simStats .simCell.good strong{color:var(--green)}
+#simStats .simCell.bad strong{color:var(--red)}
 </style>
 </head>
 <body>
@@ -79,6 +96,7 @@ body.tuned #modBadge{display:inline-block}
 <section id="summary" class="card">
   <div class="sectionTitle">Assessment summary <span class="muted">everything on this page, in one place</span></div>
   <div class="sumGrid" id="sumGrid"></div>
+  <div id="sumProjection"></div>
   <div id="sumText"></div>
   <div class="tuneBtns" style="max-width:340px">
     <button id="copySum">Copy summary</button>
@@ -211,7 +229,7 @@ function buildActions(){actions=[];bom.forEach(c=>{let x=results.find(r=>r.c.com
 function applyAction(base,act){let a=base.map(x=>({...x})),c=a.find(x=>x.component_id==act.comp);if(!c)return a;let x=results.find(r=>r.c.component_id==act.comp);if(act.type=="PATCH"){let m=x.matches.find(v=>v.fix_available=="yes"),f=firstFix(m?.version_affected);if(f)c.version=f}if(act.type=="REPLACE"){let alt=a.find(y=>y.category==c.category&&low(y.vendor)!=low(c.vendor)&&!policy.some(p=>p.rule_type=="vendor"&&low(p.key)==low(y.vendor)&&p.action=="block"));if(alt){c.vendor=alt.vendor;c.model=alt.model;c.version=alt.version;c.country_of_origin=alt.country_of_origin}}if(act.type=="REFRESH")c.end_of_life="no";if(act.type=="QUALIFY")c.validated_alternative="yes";if(act.type=="IDENTIFY"){if(unk(c.vendor))c.vendor="Identified supplier";if(unk(c.model))c.model="Identified model";if(unk(c.version))c.version="1.0";}return a}
 function chosen(){return actions.filter(x=>document.querySelector(`#act-${x.id}`)?.checked)}
 function renderActions(){document.querySelector("#actions").innerHTML=actions.length?actions.map(a=>`<label class="actionRow"><input id="act-${a.id}" type="checkbox" onchange="renderSim()"><span>${esc(a.label)}</span><span class="actionMeta">${a.effort}</span></label>`).join(""):'<div class="empty">Nothing to remediate. This BOM already clears every approval condition: no blocked vendors, no critical components, and provenance established for every part.</div>'}
-function renderSim(){let base=aggregate(bom),selected=chosen(),current=bom.map(x=>({...x}));selected.forEach(a=>current=applyAction(current,a));let sim=aggregate(current);document.querySelector("#simStats").innerHTML=[["Original risk",round(base.overall)],["After changes",round(sim.overall)],["Change",`${round(sim.overall-base.overall)>0?"+":""}${round(sim.overall-base.overall)}`],["Confidence",pct(sim.coverage)],["Verdict",sim.verdict]].map(x=>`<div class="simStat"><small class="muted">${x[0]}</small><strong>${x[1]}</strong></div>`).join("");if(typeof renderSummary==='function' && bom.length) renderSummary(aggregate(bom))}
+function renderSim(){let base=aggregate(bom),selected=chosen(),current=bom.map(x=>({...x}));selected.forEach(a=>current=applyAction(current,a));let sim=aggregate(current);document.querySelector("#simStats").innerHTML=(function(){const d=round(sim.overall-base.overall),vc=v=>v=="REJECT"?"vd-REJECT":v=="APPROVE"?"vd-APPROVE":"vd-CONDITIONAL";return [["Original risk",round(base.overall),""],["After changes",round(sim.overall),""],["Change",(d>0?"+":"")+d, d<0?"good":d>0?"bad":""],["Confidence",pct(sim.coverage),""]].map(x=>`<div class="simCell ${x[2]}"><small>${x[0]}</small><strong>${x[1]}</strong></div>`).join("")+`<div class="vd ${vc(sim.verdict)}" style="margin-top:6px"><small>Verdict</small><strong>${sim.verdict}</strong></div>`;})();if(typeof renderSummary==='function' && bom.length) renderSummary(aggregate(bom))}
 function recommend(){const dist=z=>[z.blocked.length,z.critical.length,Math.max(0,TUNE.coverage-z.coverage)],cmp=(a,b)=>{for(let i=0;i<a.length;i++)if(a[i]!==b[i])return a[i]<b[i]?-1:1;return 0};let chosenIds=[],current=bom.map(x=>({...x}));while(aggregate(current).verdict!="APPROVE"){const here=dist(aggregate(current));let best=null,bestD=null;actions.filter(a=>!chosenIds.includes(a.id)).forEach(a=>{const z=aggregate(applyAction(current,a)),d=dist(z),eff={low:0,medium:1,high:2}[a.effort],c=bestD?cmp(d,bestD[0]):-1;if(!best||c<0||(c===0&&(z.overall<bestD[1]||(z.overall===bestD[1]&&eff<bestD[2])))){best=a;bestD=[d,z.overall,eff]}});if(!best)break;if(cmp(bestD[0],here)>=0)break;current=applyAction(current,best);chosenIds.push(best.id)}actions.forEach(a=>{let el=document.querySelector(`#act-${a.id}`);if(el)el.checked=chosenIds.includes(a.id)});renderSim()}
 function openDetail(id){let x=results.find(r=>r.c.component_id==id);if(!x)return;document.querySelector("#detailTitle").innerHTML=`<div class="eyebrow">${esc(x.c.component_id)} · ${esc(x.c.category)}</div><h2 style="margin:3px 0">${esc(x.c.component_name)} ${pill(x.band)}</h2>`;let d=x.c;document.querySelector("#detail").innerHTML=`<div class="detailGrid">${[["Vendor",d.vendor],["Model",d.model],["Version",d.version],["Origin",d.country_of_origin],["Quantity",d.quantity],["Lead time",d.lead_time_weeks],["Alternative",d.validated_alternative],["End of life",d.end_of_life]].map(v=>`<div><b>${v[0]}</b><span>${esc(v[1])}</span></div>`).join("")}</div>${x.id?`<h3>Why this score</h3><table><thead><tr><th>Dimension</th><th>Score</th><th>Weight</th><th>Reason</th></tr></thead><tbody>${Object.keys(WEIGHTS).map(k=>`<tr><td>${k}</td><td>${round(x.dims[k])}</td><td>${WEIGHTS[k]}</td><td class="muted">${reason(k,x)}</td></tr>`).join("")}</tbody></table><div class="arith">weighted base ${x.base} × criticality ${CRIT[d.category]||1} = ${x.weighted}<br>dominance floor = ${x.floor}<br><b>score = ${x.score}, set by the ${x.driver}</b><br>normalised = ${(x.score/100).toFixed(2)}</div>`:"<div class=\"notice\">NOT SCORED — vendor, model, and version are not all identifiable. Unknown is not zero and is included in the data-confidence calculation.</div>"}<h3>Recommended action</h3><p>${esc(advice(x))}</p><div class="evidence"><h3>Evidence · ${x.matches.length} matching CVE${x.matches.length==1?"":"s"}</h3>${x.matches.map(v=>`<div class="evidenceItem"><b>${esc(v.cve_id)}</b> · CVSS ${v.cvss_score} · ${esc(v.severity)} · ${esc(v.score_source)} · ${esc(v.cwe)} · KEV ${esc(v.kev)} · EPSS ${v.epss} / ${v.epss_percentile}<br><span class="muted">${esc(v.description)}</span></div>`).join("")||'<p class="muted">No matching CVE in the attached offline dataset.</p>'}</div>`;document.querySelector("#modal").classList.add("open")}
 function reason(k,x){return {vulnerability:x.matches.length?`${x.matches.length} CVE match${x.matches.length>1?"es":""}; worst CVSS ${x.matches[0].cvss_score}.`:"No matching CVEs.",policy:x.vr?`${x.vr.risk_tier} vendor rule (${x.vr.action}).`:"No vendor rule.",lifecycle:x.c.end_of_life=="yes"?"End-of-life declared.":x.c.end_of_life=="no"?"Not end-of-life.":"Lifecycle unknown.",geopolitical:unk(x.c.country_of_origin)?"Origin unknown.":"Country policy tier applied.",operational:"Alternative, category source count, and lead time combined."}[k]}
@@ -310,18 +328,45 @@ function renderTuneDelta(a){
 function renderSummary(a){
   const grid=document.querySelector("#sumGrid"), out=document.querySelector("#sumText");
   if(!grid||!out) return;
+  const picked=(typeof chosen==="function")?chosen():[];
   const rated=a.rr.filter(x=>x.id), unknown=a.rr.filter(x=>!x.id);
   const top=rated.slice().sort((x,y)=>y.score-x.score).slice(0,3);
-  grid.innerHTML=[["Verdict",a.verdict],["Overall risk",round(a.overall)+" / 100"],
-    ["Data confidence",pct(a.coverage)],["Components",a.rr.length],
-    ["Critical + High",a.critical.length+a.rr.filter(x=>x.band=="HIGH").length]]
-    .map(([l,v])=>`<div class="sumCell"><small>${l}</small><strong>${v}</strong></div>`).join("");
+  const vclass=v=>v=="REJECT"?"vd-REJECT":v=="APPROVE"?"vd-APPROVE":"vd-CONDITIONAL";
+  const rband=x=>x>=75?"CRITICAL":x>=50?"HIGH":x>=25?"MEDIUM":"LOW";
+  let sim=null;
+  if(picked.length){
+    let cur=bom.map(x=>({...x}));
+    picked.forEach(x=>cur=applyAction(cur,x));
+    sim=aggregate(cur);
+  }
+  let cells=`<div class="vd ${vclass(a.verdict)}"><small>Assessment as it stands</small><strong>${a.verdict}</strong></div>`
+    +`<div class="sumCell rk-${rband(a.overall)}"><small>Overall risk</small><strong>${round(a.overall)} / 100</strong></div>`
+    +`<div class="sumCell"><small>Data confidence</small><strong>${pct(a.coverage)}</strong></div>`
+    +`<div class="sumCell"><small>Components</small><strong>${a.rr.length}</strong></div>`
+    +`<div class="sumCell"><small>Critical + High</small><strong>${a.critical.length+a.rr.filter(x=>x.band=="HIGH").length}</strong></div>`;
+  grid.innerHTML=cells;
+  const proj=document.querySelector("#sumProjection");
+  if(proj){
+    if(!sim){ proj.innerHTML=""; }
+    else {
+      const d=round(sim.overall-a.overall);
+      proj.innerHTML=`<div class="projHead">If the ${picked.length} selected action(s) are completed</div>
+        <div class="projRow">
+          <div class="vd ${vclass(sim.verdict)}"><small>Projected verdict</small><strong>${sim.verdict}</strong></div>
+          <div class="sumCell rk-${rband(sim.overall)}"><small>Projected risk</small><strong>${round(sim.overall)} / 100</strong></div>
+          <div class="sumCell"><small>Change</small><strong class="${d<0?'arrowDown':d>0?'arrowUp':''}">${d>0?"+":""}${d}</strong></div>
+          <div class="sumCell"><small>Projected confidence</small><strong>${pct(sim.coverage)}</strong></div>
+        </div>
+        <div class="tuneNote">These are projections. The assessment above is the BOM as submitted &mdash;
+        it does not change until the actions are actually carried out.</div>`;
+    }
+  }
 
   const L=[];
   L.push("BOMSHIELD ASSESSMENT SUMMARY");
   L.push("=".repeat(58));
   L.push("");
-  L.push(`Decision            ${a.verdict}`);
+  L.push(`Decision (as submitted)   ${a.verdict}`);
   L.push(`Reason              ${a.reason}`);
   L.push(`Overall risk        ${round(a.overall)} / 100   (worst component ${round(a.worst)})`);
   L.push(`Data confidence     ${pct(a.coverage)}  -  ${rated.length} of ${a.rr.length} components identifiable`);
@@ -345,7 +390,6 @@ function renderSummary(a){
     L.push(`UNVERIFIABLE (${unknown.length}) - reported NOT SCORED, never treated as safe`);
     L.push("  " + unknown.map(x=>x.c.component_id).join(", "));
   }
-  const picked=(typeof chosen==="function")?chosen():[];
   L.push("");
   L.push("REMEDIATION");
   if(!actions.length) L.push("  None required. This BOM already clears every approval condition.");
