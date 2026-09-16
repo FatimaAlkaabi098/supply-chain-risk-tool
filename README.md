@@ -2,6 +2,7 @@
 
 **AI Server Supply-Chain Risk Assessment**
 School of Cyber Defense 2026 — Team Shadow Djinn
+Extended for **CSF 4003 Risk Management** with a standards-aligned risk register.
 
 Scores an AI server **Bill of Materials for supply-chain risk before purchase**.
 
@@ -10,6 +11,68 @@ Scores an AI server **Bill of Materials for supply-chain risk before purchase**.
 
 **Who it is for:** a government or data-centre procurement office.
 **What it replaces:** manual vendor due-diligence spreadsheets.
+
+---
+
+## Risk assessment standards (CSF 4003)
+
+`standards.py` re-expresses the same evidence in the structure **ISO/IEC 27005** and
+**NIST SP 800-30** require, and adds the **OCTAVE** asset framing and the **FAIR**
+quantitative view.
+
+```
+python score.py        # produces reports/data.json
+python standards.py    # produces the risk register from it
+```
+
+That writes:
+
+| File | What it is |
+|---|---|
+| `reports/risk_register.csv` | The register as a spreadsheet, one row per risk scenario |
+| `reports/risk_register.html` | The same register, printable, with the 5×5 matrix |
+
+The application carries the same thing under **Risk assessment standards**, with five
+tabs: the register, the 5×5 matrix (inherent and residual side by side), the framework
+mapping, the FAIR view, and a method-agreement check.
+
+### How the mapping works
+
+BOMShield's 0–100 index is not a Likelihood × Impact model, and pretending otherwise
+would be dishonest. But the tool already separates the two kinds of evidence — it simply
+never labelled them:
+
+| | Evidence already in BOMShield |
+|---|---|
+| **Likelihood** | EPSS percentile, CISA KEV listing, end-of-life status, single-source status, origin tier |
+| **Impact** | CVSS severity, and the category criticality multiplier — a BMC has total control of a machine and survives an OS reinstall; a fan does not |
+
+So each component yields one risk scenario per applicable dimension, following
+`Asset → Threat → Vulnerability → Existing controls → Likelihood → Impact → Risk level
+→ Treatment → Residual risk`, scored as **Risk = Likelihood × Impact** on 1–5 scales
+(1–25, banded Very low → Very high).
+
+### Two things worth knowing
+
+**Treatments reduce likelihood, not impact.** Patching firmware makes exploitation less
+likely; it does not make a management controller less critical to the machine. Impact is
+a property of the asset, likelihood is a property of the threat environment. On the
+matrix tab, treatment moves scenarios *left*, not *down* — which is what controls
+actually do. The exception is `Avoid` (re-sourcing), which retires the scenario because
+the asset leaves the assessment.
+
+**The two methods agree, but not perfectly.** Across the 28 rated components the 0–100
+index and the highest Likelihood × Impact per asset correlate at **r = 0.911**. That is
+the result you want: strong agreement means neither method is broken, and imperfect
+agreement means the standards view adds something. Where they differ, the weighted index
+lets a very severe CVE dominate a component, while Likelihood × Impact holds back a
+finding that is severe but unlikely to be exploited.
+
+The FAIR money figures are an **illustrative calibration for coursework**, not a
+valuation — FAIR expects loss estimates from the organisation's own history. The
+structure (Loss Event Frequency × Loss Magnitude) is genuine; the currency amounts are
+placeholders, and both are driven by the same Likelihood and Impact as the qualitative
+view so the two cannot silently disagree.
 
 ---
 

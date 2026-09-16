@@ -7,3 +7,4 @@ Thumbs.db
 reports/*.html
 reports/*.json
 !reports/.gitkeep
+reports/*.csv

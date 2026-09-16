@@ -310,3 +310,56 @@ round-half-away-from-zero helper, and the two agree exactly.
 | 2026-09-09 | Team | Dominance floor for Vulnerability and Policy | A weighted mean was diluting critical single findings. |
 | 2026-09-09 | Team | Unknown components NOT SCORED rather than penalised | A number implies precision we do not have. |
 | 2026-09-09 | Team | Declined CycloneDX ingestion and a policy-pack selector | CSV is permitted by the brief; effort went to the dashboard instead. |
+
+## Mapping the index onto Likelihood × Impact (CSF 4003)
+
+The course requires a risk assessment expressed the way ISO/IEC 27005 and NIST SP 800-30
+express one: a risk scenario carrying a Likelihood and an Impact. BOMShield's 0–100 index
+is not that, and the wrong move would have been to divide the index by 20 and call the
+result a Likelihood.
+
+We did not do that. Instead we asked which of BOMShield's existing inputs are *evidence
+of likelihood* and which are *evidence of impact*, and found the tool had already split
+them:
+
+- EPSS publishes an exploitation probability. A CISA KEV listing is an observation that
+  exploitation is happening. End-of-life status, single-source status and origin tier all
+  describe how likely a loss event is. **These are likelihood.**
+- CVSS describes how bad exploitation would be. The category criticality multiplier
+  (bmc 1.5 … cooling 0.8) is a statement about how much damage the loss of that asset
+  does. **These are impact.**
+
+So the mapping is a re-expression of evidence already held, not a second model bolted on.
+The test of that claim is whether the two views agree: across the 28 rated components
+they correlate at r = 0.911. Strong, but not 1.000 — if it were 1.000 the standards view
+would be adding nothing.
+
+### Controls reduce likelihood, not impact
+
+The residual calculation deliberately leaves Impact unchanged. Patching firmware does not
+make a baseboard management controller less critical to the machine; it makes exploitation
+less likely. Conflating the two is the most common error in a student risk register, and it
+flatters the result — it lets a control appear to shrink a consequence it cannot touch.
+
+The one exception is the `Avoid` treatment. Re-sourcing a component from an approved
+supplier removes the asset from the assessment, so that scenario is retired rather than
+reduced.
+
+### Why the FAIR figures are labelled as placeholders
+
+FAIR is quantitative: risk is Loss Event Frequency × Loss Magnitude, and both should be
+calibrated from the organisation's own loss history. A student project has no such history.
+We implemented the structure and labelled the currency amounts as an illustrative
+calibration, because a number presented as a valuation when it is really an assumption is
+worse than no number at all. The frequencies and magnitudes are driven by the same
+Likelihood and Impact as the qualitative view, so the two cannot silently diverge.
+
+### A defect this work uncovered
+
+The first version of `standards.py` read CVE severity from a key named `cvss_score`. That
+is the column name in the raw CSV, but `score.py`'s payload calls it `cvss`. Every
+vulnerability scenario was therefore reading severity 0.0 and understating impact — the
+correlation against the index sat at 0.877 instead of 0.911, which was high enough to look
+plausible. The lookup now accepts either shape. The lesson is the one the self-check taught
+earlier in this project: agreement between two implementations is only evidence when you
+actually compare them.

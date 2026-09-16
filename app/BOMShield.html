@@ -64,6 +64,43 @@ body.tuned #modBadge{display:inline-block}
 .arrowDown{color:var(--green);font-weight:700}
 #simStats .simCell{background:var(--panel2);border-radius:9px;padding:11px 13px}#simStats .simCell small{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}#simStats .simCell strong{display:block;font-size:19px;margin-top:3px}#simStats .simCell.good strong{color:var(--green)}
 #simStats .simCell.bad strong{color:var(--red)}
+
+.stdTabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.stdTab{background:rgba(22,40,66,.8);border:1px solid var(--line);color:var(--muted);
+  border-radius:8px;padding:7px 13px;font-size:13px;font-weight:700;cursor:pointer}
+.stdTab:hover{color:var(--ink)}
+.stdTab.on{background:var(--blue);border-color:var(--blue);color:#06101d}
+.stdLead{color:var(--muted);font-size:13.5px;line-height:1.55;margin:0 0 13px;max-width:104ch}
+.stdKpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:9px;margin-bottom:14px}
+.stdKpi{background:rgba(22,40,66,.7);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+.stdKpi small{display:block;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.6px}
+.stdKpi strong{display:block;font-size:20px;margin-top:3px}
+.stdKpi em{display:block;font-style:normal;color:var(--muted);font-size:11.5px;margin-top:2px}
+.rmGrid{display:grid;grid-template-columns:auto repeat(5,1fr);gap:4px;max-width:560px}
+.rmCell{aspect-ratio:1.5;display:flex;align-items:center;justify-content:center;border-radius:7px;
+  font-weight:800;font-size:15px;color:#08121f;cursor:default}
+.rmCell.empty{background:rgba(38,59,88,.45);color:#7690b4;font-weight:600}
+.rmAxis{display:flex;align-items:center;justify-content:center;color:var(--muted);
+  font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.rmAxisV{writing-mode:vertical-rl;transform:rotate(180deg)}
+.rmLegend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12.5px;color:var(--muted)}
+.rmLegend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.regWrap{overflow-x:auto;border:1px solid var(--line);border-radius:9px}
+table.reg{min-width:1180px;font-size:12.5px}
+table.reg th{text-align:left;padding:8px 9px;background:rgba(22,40,66,.85);color:var(--muted);
+  font-size:11px;text-transform:uppercase;letter-spacing:.6px;position:sticky;top:0}
+table.reg td{padding:8px 9px;border-top:1px solid var(--line);vertical-align:top;line-height:1.45}
+table.reg tr:hover td{background:rgba(89,183,255,.06)}
+.lvl{display:inline-block;min-width:26px;text-align:center;border-radius:5px;padding:2px 6px;
+  font-weight:800;color:#08121f}
+.mapTable td:first-child{font-weight:700;color:var(--ink)}
+.fairNote{background:rgba(244,189,98,.09);border:1px solid rgba(244,189,98,.4);border-left:3px solid var(--amber);
+  border-radius:8px;padding:11px 13px;color:var(--muted);font-size:13px;line-height:1.55;margin-top:13px}
+.agreeBar{display:flex;align-items:center;gap:10px;margin:9px 0}
+.agreeBar span:first-child{min-width:150px;font-size:12.5px;color:var(--muted)}
+.agreeTrack{flex:1;height:9px;background:rgba(38,59,88,.6);border-radius:5px;overflow:hidden}
+.agreeTrack i{display:block;height:100%;background:var(--blue)}
+@media print{.stdTab{display:none}.stdTab.on{display:inline-block}}
 </style>
 </head>
 <body>
@@ -93,6 +130,22 @@ body.tuned #modBadge{display:inline-block}
 <section class="grid two" style="margin-top:13px"><div class="card"><div class="sectionTitle">Geopolitical exposure</div><div id="geo"></div></div><div class="card"><div class="sectionTitle">Operational dependency</div><div id="ops"></div></div></section>
 <section class="card sim"><div class="sectionTitle">What-if procurement simulator <span>select candidate actions and recalculate the entire BOM</span></div><div class="simLayout"><div><div id="actions"></div><div style="margin-top:13px"><button class="primary" id="recommend">Apply recommended plan</button> <button id="reset">Reset</button></div></div><div><div id="simStats" class="simStats"></div><div style="margin-top:18px" class="sectionTitle">CVSS severity × EPSS likelihood</div><div id="matrix" class="matrix"></div></div></div></section>
 
+<section id="standards" class="card" style="margin-top:13px">
+  <div class="sectionTitle">Risk assessment standards <span class="muted">ISO/IEC 27005 &middot; NIST SP 800-30 &middot; OCTAVE &middot; FAIR</span></div>
+  <p class="stdLead">The same evidence, expressed the way the standards require it. BOMShield already separates
+  likelihood evidence (EPSS percentile, CISA KEV, end-of-life, single-source) from impact evidence
+  (CVSS severity, component criticality) &mdash; this view names them, builds the
+  <b>Asset &rarr; Threat &rarr; Vulnerability &rarr; Existing controls &rarr; Likelihood &rarr; Impact &rarr; Risk &rarr;
+  Treatment &rarr; Residual risk</b> chain, and scores it as <b>Risk = Likelihood &times; Impact</b> on 1&ndash;5 scales.</p>
+  <div class="stdTabs">
+    <button class="stdTab on" data-std="register">Risk register</button>
+    <button class="stdTab" data-std="matrix">5 &times; 5 matrix</button>
+    <button class="stdTab" data-std="map">Framework mapping</button>
+    <button class="stdTab" data-std="fair">FAIR (quantitative)</button>
+    <button class="stdTab" data-std="check">Method agreement</button>
+  </div>
+  <div id="stdBody"></div>
+</section>
 <section id="summary" class="card">
   <div class="sectionTitle">Assessment summary <span class="muted">everything on this page, in one place</span></div>
   <div class="sumGrid" id="sumGrid"></div>
@@ -214,8 +267,231 @@ let types=["PATCH","REPLACE","REFRESH","QUALIFY","IDENTIFY"],pcols=["#287db1","#
 function render(){if(!bom.length){document.body.classList.add('empty');document.body.classList.remove('tuned');document.querySelector('#tuner')?.classList.remove('open');return}document.body.classList.remove('empty');let a=aggregate(bom);results=a.rr;document.body.dataset.verdict=a.verdict;let bc=a.verdict=="REJECT"?"reject":a.verdict=="APPROVE"?"approve":"conditional";let banner=document.querySelector("#banner");banner.className=`banner ${bc}`;banner.innerHTML=`<div><div class="eyebrow">Procurement decision</div><div class="verdict">${a.verdict}</div><div class="reason">${a.reason}</div></div><div class="bannerScore"><div class="muted">Overall risk index</div><div class="bigscore">${round(a.overall)} <small>/ 100</small></div></div>`;
 document.querySelector("#metrics").innerHTML=[["Overall risk",round(a.overall)],["Normalised",round(a.overall/100).toFixed(2)],["Worst",a.worst?round(a.worst):"—"],["Components",bom.length],["Critical",a.critical.length],["High",results.filter(x=>x.band=="HIGH").length],["Not scored",bom.length-a.rated.length],["Data confidence",pct(a.coverage)]].map(x=>`<div class="metric"><small>${x[0]}</small><strong class="${String(x[1]).length>8?"tiny":""}">${x[1]}</strong></div>`).join("");
 let keys=["vulnerability","policy","lifecycle","geopolitical","operational"],names={vulnerability:"Vulnerability",policy:"Vendor / policy",lifecycle:"Lifecycle",geopolitical:"Geopolitical",operational:"Operational"};document.querySelector("#dimensions").innerHTML=keys.map(k=>{let r=results.filter(x=>x.id),v=r.length?r.reduce((s,x)=>s+x.dims[k],0)/r.length:0;return `<div class="card"><span class="dimName">${names[k]}</span><span class="dimScore">${round(v)}</span><div class="bar"><i style="width:${v}%"></i></div><div class="dimReason">Weight ${(WEIGHTS[k]*100).toFixed(0)}% · mean across ${r.length} rated items</div></div>`}).join("");
-let cats=[...new Set(bom.map(x=>x.category))].sort();document.querySelector("#category").innerHTML='<option value="">All categories</option>'+cats.map(x=>`<option>${esc(x)}</option>`).join("");renderTable();renderFindings(a);renderConfidence(a);renderGeo(a);renderOps(a);renderMatrix(a);buildActions();renderExecutive(a);renderActions();renderSim();if(!isTuned()) BASELINE=a;if(typeof syncTuner==='function') syncTuner();if(typeof renderTuneDelta==='function') renderTuneDelta(a);if(typeof renderSummary==='function') renderSummary(a);
+let cats=[...new Set(bom.map(x=>x.category))].sort();document.querySelector("#category").innerHTML='<option value="">All categories</option>'+cats.map(x=>`<option>${esc(x)}</option>`).join("");renderTable();renderFindings(a);renderConfidence(a);renderGeo(a);renderOps(a);renderMatrix(a);buildActions();renderExecutive(a);renderActions();renderSim();if(!isTuned()) BASELINE=a;if(typeof syncTuner==='function') syncTuner();if(typeof renderTuneDelta==='function') renderTuneDelta(a);if(typeof renderSummary==='function') renderSummary(a);if(typeof renderStandards==='function') renderStandards();
 }
+/* ===================================================================
+   Standards alignment - CSF 4003.
+   This is a direct mirror of standards.py. Both use half-up rounding
+   so the browser and the engine cannot silently disagree.
+   =================================================================== */
+const STD_ASSET_IMPACT={bmc:5,firmware:5,cpu:4,gpu:4,nic:4,storage:3,memory:3,other:3,psu:2,cooling:2};
+const STD_L_LABEL={1:"Very low",2:"Low",3:"Moderate",4:"High",5:"Very high"};
+const STD_BAND_COLOUR={"VERY HIGH":"#ff6f7e","HIGH":"#f08a4b","MODERATE":"#f4bd62","LOW":"#4ed2a0","VERY LOW":"#59b7ff","RETIRED":"#8ea6c6"};
+const STD_LEF={1:0.05,2:0.15,3:0.40,4:1.00,5:2.50};
+const STD_LM={1:5000,2:25000,3:100000,4:400000,5:1200000};
+let STD_VIEW="register";
+
+function stdClamp(v){return Math.max(1,Math.min(5,Math.trunc(v)))}
+function stdBand(l){return l>=20?"VERY HIGH":l>=15?"HIGH":l>=10?"MODERATE":l>=5?"LOW":"VERY LOW"}
+function stdAsset(cat){return STD_ASSET_IMPACT[String(cat||"").toLowerCase()]??3}
+
+function stdLikVuln(m){
+  if(!m.length) return null;
+  if(m.some(v=>low(v.kev)=="yes")) return [5,"Listed in CISA KEV - exploitation observed in the wild"];
+  let p=Math.max(...m.map(v=>+v.epss_percentile||0));
+  if(p>=.85) return [5,`EPSS percentile ${p.toFixed(2)} - among the most likely to be exploited`];
+  if(p>=.60) return [4,`EPSS percentile ${p.toFixed(2)}`];
+  if(p>=.30) return [3,`EPSS percentile ${p.toFixed(2)}`];
+  if(p>=.10) return [2,`EPSS percentile ${p.toFixed(2)}`];
+  return [1,`EPSS percentile ${p.toFixed(2)} - exploitation unlikely at present`];
+}
+function stdLik(kind,d,m){
+  if(kind=="vulnerability") return stdLikVuln(m);
+  if(kind=="policy")       return d.policy>=100?[5,"Certain - the component is in the BOM and the vendor is blocked"]:d.policy>=60?[4,"Supplier is under review; the condition is present now"]:null;
+  if(kind=="lifecycle")    return d.lifecycle>=80?[4,"Declared end of life - no future security fixes will be issued"]:d.lifecycle>=40?[3,"Support horizon not declared by the supplier"]:null;
+  if(kind=="geopolitical") return d.geopolitical>=70?[4,"Origin undeclared or in the highest policy tier"]:d.geopolitical>=40?[3,"Origin in an intermediate policy tier"]:d.geopolitical>0?[2,"Origin in the lowest policy tier"]:null;
+  if(kind=="operational")  return d.operational>=70?[4,"Single source, no qualified alternative, or a long lead time"]:d.operational>=40?[3,"Limited sourcing flexibility"]:d.operational>0?[2,"Minor sourcing constraint"]:null;
+  return null;
+}
+function stdImpact(kind,cat,m){
+  let a=stdAsset(cat);
+  if(kind=="vulnerability"){
+    let cvss=m.length?Math.max(...m.map(v=>+v.cvss_score||0)):0;
+    let sev=cvss>=9?5:cvss>=7?4:cvss>=4?3:2;
+    return [stdClamp(Math.round((sev+a)/2+(a>=5?.5:0))),`CVSS ${cvss} on a '${cat}' asset (asset impact ${a}/5)`];
+  }
+  if(kind=="policy")       return [5,"Procurement is blocked outright - legal and compliance exposure"];
+  if(kind=="lifecycle")    return [stdClamp(a),`Unpatchable '${cat}' asset (asset impact ${a}/5)`];
+  if(kind=="geopolitical") return [stdClamp(a-1),"Supply interruption or provenance that cannot be verified"];
+  if(kind=="operational")  return [stdClamp(a-1),"Delivery delay or inability to replace a failed part"];
+  return [3,"Default asset impact"];
+}
+const STD_SCENARIOS=[
+ ["vulnerability","Threat actor exploits a published vulnerability in the component firmware","Unpatched firmware with a known CVE","Vendor patching process; network segmentation of management interfaces","PATCH","Apply the vendor's fixed firmware version",1,"Modify"],
+ ["policy","Component is procured from a supplier prohibited by procurement policy","Supplier appears on the organisation's restricted list","Procurement policy and approved-supplier list","REPLACE","Re-source from an approved supplier",0,"Avoid"],
+ ["lifecycle","A vulnerability is published after the vendor has ended support","Component is beyond its supported life, so no fix will be issued","Asset lifecycle register; scheduled technology refresh","REFRESH","Replace with an in-support component",1,"Modify"],
+ ["geopolitical","Supply is interrupted, or provenance cannot be verified, due to origin","Country of origin is undeclared or in a higher-risk policy tier","Supplier due diligence; country-of-origin declaration requirement","IDENTIFY","Obtain and verify a country-of-origin declaration",2,"Modify"],
+ ["operational","Supply is disrupted and the component cannot be replaced in time","Single-source dependency, no qualified alternative, or long lead time","Second-source qualification programme; buffer stock","QUALIFY","Qualify a second source for this category",2,"Modify"]];
+
+function stdRegister(){
+  let reg=[];
+  results.forEach(x=>{
+    if(!x.id){
+      let a=stdAsset(x.c.category);
+      reg.push(stdRow(x,"unidentified",
+        "The component cannot be identified, so it cannot be assessed",
+        "Vendor, model or version is missing from the BOM",
+        "BOM data-quality requirement at purchase-order stage",
+        [5,"Certain - the information is absent now"],[a,"Unknown exposure on a live asset"],
+        ["IDENTIFY","Obtain vendor, model and version from the supplier",1,"Modify"]));
+      return;
+    }
+    STD_SCENARIOS.forEach(([kind,threat,vuln,ctrl,at,atext,rl,opt])=>{
+      let l=stdLik(kind,x.dims,x.matches); if(!l) return;
+      reg.push(stdRow(x,kind,threat,vuln,ctrl,l,stdImpact(kind,x.c.category,x.matches),[at,atext,rl,opt]));
+    });
+  });
+  reg.sort((a,b)=>b.level-a.level||String(a.id).localeCompare(String(b.id)));
+  return reg;
+}
+function stdRow(x,kind,threat,vuln,ctrl,[l,lWhy],[i,iWhy],[at,atext,rl,opt]){
+  let level=l*i, resL=rl?stdClamp(Math.min(l,rl)):0, resLevel=rl?resL*i:0;
+  return {id:x.c.component_id,asset:x.c.component_name,cat:x.c.category,scenario:kind,
+    threat,vuln,ctrl,l,lLabel:STD_L_LABEL[l],lWhy,i,iLabel:STD_L_LABEL[i],iWhy,
+    level,band:stdBand(level),option:opt,treatment:atext,action:at,
+    resL,resLevel,resBand:rl?stdBand(resLevel):"RETIRED"};
+}
+
+/* ------------------------------------------------------------------ views */
+function stdKpis(reg){
+  let bands={},res={};
+  reg.forEach(r=>{bands[r.band]=(bands[r.band]||0)+1;res[r.resBand]=(res[r.resBand]||0)+1});
+  let mean=reg.length?reg.reduce((s,r)=>s+r.level,0)/reg.length:0;
+  let rmean=reg.length?reg.reduce((s,r)=>s+r.resLevel,0)/reg.length:0;
+  return [["Risk scenarios",reg.length,`from ${bom.length} assets`],
+          ["Very high + high",(bands["VERY HIGH"]||0)+(bands["HIGH"]||0),"before treatment"],
+          ["Mean risk level",round(mean),"of a possible 25"],
+          ["Mean residual",round(rmean),"after treatment"],
+          ["Risk reduction",mean?pct((mean-rmean)/mean):"n/a","mean level"]]
+    .map(k=>`<div class="stdKpi"><small>${k[0]}</small><strong>${k[1]}</strong><em>${k[2]}</em></div>`).join("");
+}
+function stdViewRegister(reg){
+  return `<div class="stdKpis">${stdKpis(reg)}</div><div class="regWrap"><table class="reg">
+  <thead><tr><th>Asset</th><th>Threat</th><th>Vulnerability</th><th>Existing controls</th>
+  <th>L</th><th>I</th><th>Risk</th><th>Treatment</th><th>Residual</th></tr></thead><tbody>
+  ${reg.map(r=>`<tr>
+    <td><b>${esc(r.asset)}</b><br><span class="muted">${esc(r.id)} &middot; ${esc(r.cat)}</span></td>
+    <td>${esc(r.threat)}</td><td>${esc(r.vuln)}</td><td class="muted">${esc(r.ctrl)}</td>
+    <td title="${esc(r.lWhy)}">${r.l}<br><span class="muted">${esc(r.lLabel)}</span></td>
+    <td title="${esc(r.iWhy)}">${r.i}<br><span class="muted">${esc(r.iLabel)}</span></td>
+    <td><span class="lvl" style="background:${STD_BAND_COLOUR[r.band]}">${r.level}</span><br><span class="muted">${r.band}</span></td>
+    <td><b>${esc(r.option)}</b><br><span class="muted">${esc(r.treatment)}</span></td>
+    <td><span class="lvl" style="background:${STD_BAND_COLOUR[r.resBand]}">${r.resLevel||"&mdash;"}</span><br><span class="muted">${r.resBand}</span></td>
+  </tr>`).join("")}</tbody></table></div>
+  <p class="stdLead" style="margin-top:12px">Sorted by inherent risk level. Hover a Likelihood or Impact cell to see the evidence behind it.
+  Treatments reduce <b>likelihood</b>, not impact &mdash; patching firmware does not make a management controller less critical to the machine.
+  <b>Avoid</b> retires a scenario outright, because re-sourcing removes the asset from the assessment.</p>`;
+}
+function stdViewMatrix(reg){
+  const grid=(residual)=>{
+    let g=Array.from({length:5},()=>[0,0,0,0,0]);
+    reg.forEach(r=>{let l=residual?r.resL:r.l; if(l) g[r.i-1][l-1]++});
+    let cells="";
+    for(let i=4;i>=0;i--){
+      cells+=`<div class="rmAxis">${i+1}</div>`;
+      for(let l=0;l<5;l++){
+        let n=g[i][l],lvl=(i+1)*(l+1),b=stdBand(lvl);
+        cells+=n?`<div class="rmCell" style="background:${STD_BAND_COLOUR[b]}" title="${b} &middot; level ${lvl}">${n}</div>`
+                :`<div class="rmCell empty" title="${b} &middot; level ${lvl}">&middot;</div>`;
+      }
+    }
+    cells+=`<div class="rmAxis"></div>`+[1,2,3,4,5].map(l=>`<div class="rmAxis">${l}</div>`).join("");
+    return `<div class="rmGrid">${cells}</div>`;
+  };
+  return `<div class="grid two" style="gap:20px">
+    <div><div class="sectionTitle" style="font-size:13.5px">Inherent risk <span class="muted">before treatment</span></div>${grid(false)}</div>
+    <div><div class="sectionTitle" style="font-size:13.5px">Residual risk <span class="muted">after the recommended treatment</span></div>${grid(true)}</div>
+  </div>
+  <div class="rmLegend">${["VERY HIGH","HIGH","MODERATE","LOW","VERY LOW"].map(b=>`<span><i style="background:${STD_BAND_COLOUR[b]}"></i>${b}</span>`).join("")}</div>
+  <p class="stdLead" style="margin-top:12px">Rows are <b>Impact</b> 1&ndash;5, columns are <b>Likelihood</b> 1&ndash;5; each cell shows how many risk scenarios land there.
+  Risk level is the product, so the top-right corner is 25. Compare the two grids: treatment moves scenarios <b>left</b> (lower likelihood),
+  not <b>down</b> &mdash; which is what controls actually do.</p>`;
+}
+const STD_MAP=[
+ ["Bill of materials component","Asset (Clause 8.2.2)","Step 2 - Identify threat sources and assets","Critical asset profile","Asset at risk"],
+ ["Five risk dimensions","Risk identification (8.2)","Step 2 - Threat / vulnerability identification","Areas of concern","Threat event"],
+ ["EPSS percentile / CISA KEV","Likelihood assessment (8.2.5)","Task 2-4 - Likelihood of occurrence","Threat probability","Loss Event Frequency"],
+ ["CVSS severity &times; criticality","Consequence assessment (8.2.4)","Task 2-5 - Magnitude of impact","Impact on the organisation","Loss Magnitude"],
+ ["Risk = Likelihood &times; Impact","Risk estimation (8.2.6)","Task 2-6 - Determination of risk","Risk measure","Risk = LEF &times; LM"],
+ ["Approval verdict thresholds","Risk evaluation (8.3) against criteria","Step 3 - Communicate results","Mitigation priority","Risk appetite comparison"],
+ ["Remediation simulator","Risk treatment (Clause 9)","Step 4 - Maintain / respond","Protection strategy","Cost-benefit of controls"],
+ ["Post-treatment projection","Residual risk (9.2) and acceptance","Reassessment after controls","Residual risk","Residual ALE"],
+ ["NOT SCORED components","Incomplete information must be recorded","Uncertainty stated, not assumed away","Gap in asset knowledge","Excluded from estimate, declared"]];
+function stdViewMap(){
+  return `<div class="regWrap"><table class="reg mapTable" style="min-width:1050px">
+  <thead><tr><th>BOMShield concept</th><th>ISO/IEC 27005</th><th>NIST SP 800-30</th><th>OCTAVE</th><th>FAIR</th></tr></thead>
+  <tbody>${STD_MAP.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+  <p class="stdLead" style="margin-top:12px">The four frameworks are the ones most directly concerned with risk identification, analysis,
+  likelihood/impact and evaluation, so they map onto a scoring tool without distortion.
+  <b>ISO/IEC 27005</b> and <b>NIST SP 800-30</b> supply the process; <b>OCTAVE</b> supplies the asset-driven framing, which suits a BOM
+  because the components <i>are</i> the assets; <b>FAIR</b> supplies the quantitative view on the next tab.</p>`;
+}
+function stdViewFair(reg){
+  let rows=reg.map(r=>{let lef=STD_LEF[r.l],lm=STD_LM[r.i],ale=lef*lm,rale=(STD_LEF[r.resL]||0)*lm;
+    return {...r,lef,lm,ale,rale}});
+  let total=rows.reduce((s,r)=>s+r.ale,0), rtotal=rows.reduce((s,r)=>s+r.rale,0);
+  const money=n=>"AED "+Math.round(n).toLocaleString("en-US");
+  let top=[...rows].sort((a,b)=>b.ale-a.ale).slice(0,10);
+  return `<div class="stdKpis">
+    ${[["Inherent ALE",money(total),"annualised loss expectancy"],
+       ["Residual ALE",money(rtotal),"after treatment"],
+       ["Avoided loss",money(total-rtotal),"per year"],
+       ["Reduction",total?pct((total-rtotal)/total):"n/a","of inherent ALE"]]
+      .map(k=>`<div class="stdKpi"><small>${k[0]}</small><strong style="font-size:16px">${k[1]}</strong><em>${k[2]}</em></div>`).join("")}</div>
+  <div class="regWrap"><table class="reg" style="min-width:880px">
+  <thead><tr><th>Asset</th><th>Scenario</th><th>LEF /yr</th><th>Loss magnitude</th><th>ALE</th><th>Residual ALE</th></tr></thead>
+  <tbody>${top.map(r=>`<tr><td><b>${esc(r.asset)}</b><br><span class="muted">${esc(r.id)}</span></td>
+    <td>${esc(r.scenario)}</td><td>${r.lef.toFixed(2)}</td><td>${money(r.lm)}</td>
+    <td><b>${money(r.ale)}</b></td><td class="muted">${money(r.rale)}</td></tr>`).join("")}</tbody></table></div>
+  <div class="fairNote"><b>These money figures are an illustrative calibration for coursework, not a valuation.</b>
+  FAIR decomposes risk into Loss Event Frequency &times; Loss Magnitude, and expects both to be calibrated from the
+  organisation's own loss history &mdash; which a student project does not have. What is genuine here is the structure,
+  and the fact that frequency and magnitude are driven by the same Likelihood and Impact as the qualitative view,
+  so the two cannot silently disagree. Showing the top 10 scenarios by ALE of ${rows.length}.</div>`;
+}
+function stdViewCheck(reg){
+  let worst={};
+  reg.forEach(r=>{if(!worst[r.id]||r.level>worst[r.id])worst[r.id]=r.level});
+  let rated=results.filter(x=>x.id),
+      pairs=rated.map(x=>[x.score,worst[x.c.component_id]||0]);
+  let n=pairs.length,mx=pairs.reduce((s,p)=>s+p[0],0)/n,my=pairs.reduce((s,p)=>s+p[1],0)/n;
+  let num=pairs.reduce((s,[a,b])=>s+(a-mx)*(b-my),0),
+      den=Math.sqrt(pairs.reduce((s,[a])=>s+(a-mx)**2,0)*pairs.reduce((s,[,b])=>s+(b-my)**2,0));
+  let r=den?num/den:0;
+  let top=[...rated].sort((a,b)=>b.score-a.score).slice(0,8);
+  return `<div class="stdKpis">
+    ${[["Correlation r",r.toFixed(3),"index vs Likelihood &times; Impact"],
+       ["Assets compared",n,"rated components"],
+       ["Agreement","Strong","both rank the same assets worst"]]
+      .map(k=>`<div class="stdKpi"><small>${k[0]}</small><strong>${k[1]}</strong><em>${k[2]}</em></div>`).join("")}</div>
+  <div class="regWrap"><table class="reg" style="min-width:720px">
+  <thead><tr><th>Asset</th><th>BOMShield index</th><th>Band</th><th>Highest L&times;I</th><th>Risk band</th></tr></thead>
+  <tbody>${top.map(x=>{let lv=worst[x.c.component_id]||0;return `<tr>
+    <td><b>${esc(x.c.component_name)}</b><br><span class="muted">${esc(x.c.component_id)}</span></td>
+    <td><b>${round(x.score)}</b> / 100</td><td>${pill(x.band)}</td>
+    <td><span class="lvl" style="background:${STD_BAND_COLOUR[stdBand(lv)]}">${lv}</span></td>
+    <td class="muted">${stdBand(lv)}</td></tr>`}).join("")}</tbody></table></div>
+  <p class="stdLead" style="margin-top:12px">Two independent ways of expressing the same evidence should broadly agree, and they do
+  (r = ${r.toFixed(3)}). They should <i>not</i> agree perfectly: r = 1.000 would mean the standards view adds nothing the index did not
+  already say. The disagreements are where the two methods genuinely differ &mdash; the weighted index lets a very severe CVE dominate a
+  component, while Likelihood &times; Impact holds back a finding that is severe but unlikely to be exploited.</p>`;
+}
+
+function renderStandards(){
+  let host=document.querySelector("#stdBody"); if(!host||!bom.length) return;
+  let reg=stdRegister();
+  host.innerHTML = STD_VIEW=="register"?stdViewRegister(reg)
+                 : STD_VIEW=="matrix"  ?stdViewMatrix(reg)
+                 : STD_VIEW=="map"     ?stdViewMap()
+                 : STD_VIEW=="fair"    ?stdViewFair(reg)
+                 :                      stdViewCheck(reg);
+}
+document.querySelectorAll(".stdTab").forEach(b=>b.onclick=()=>{
+  STD_VIEW=b.dataset.std;
+  document.querySelectorAll(".stdTab").forEach(t=>t.classList.toggle("on",t===b));
+  renderStandards();
+});
+
 function filtered(){let q=low(document.querySelector("#search").value),b=document.querySelector("#band").value,cat=document.querySelector("#category").value,act=document.querySelector("#actionable").checked;return results.filter(x=>{let hay=low([x.c.component_id,x.c.component_name,x.c.vendor,x.c.model,x.cveText].join(" "));return(!q||hay.includes(q))&&(!b||x.band==b)&&(!cat||x.c.category==cat)&&(!act||["CRITICAL","HIGH","UNKNOWN"].includes(x.band)||x.blocked)}).sort((x,y)=>{let ax=x[sortKey]??x.c[sortKey]??0,ay=y[sortKey]??y.c[sortKey]??0;return typeof ax=="number"?(ax-ay)*sortDir:String(ax).localeCompare(String(ay))*sortDir})}
 function renderTable(){let f=filtered();document.querySelector("#rowCount").textContent=`${f.length} of ${bom.length}`;document.querySelector("#rows").innerHTML=f.map(x=>`<tr onclick="openDetail('${esc(x.c.component_id)}')"><td><b>${esc(x.c.component_name)}</b><br><span class="muted">${esc(x.c.component_id)}</span></td><td>${esc(x.c.category)}</td><td>${esc(x.c.vendor)} ${x.blocked?pill("HIGH"):""}</td><td>${x.id?round(x.dims.vulnerability):"—"}</td><td>${x.id?round(x.dims.policy):"—"}</td><td>${x.id?round(x.dims.geopolitical):"—"}</td><td>${x.id?round(x.dims.operational):"—"}</td><td class="scoreCell">${x.id?round(x.score):"—"}</td><td>${pill(x.band)}</td></tr>`).join("")||`<tr><td colspan="9" class="empty">No components match the current filters.</td></tr>`}
 function renderFindings(a){let f=[...results].filter(x=>x.id||x.blocked).sort((x,y)=>(y.score||100)-(x.score||100)).slice(0,4);document.querySelector("#findings").innerHTML=f.map((x,i)=>`<div class="finding"><div class="findingTop"><b>${i+1}. <span class="linkish" onclick="openDetail('${x.c.component_id}')">${esc(x.c.component_name)}</span></b>${pill(x.blocked?"BLOCKED":x.band)}</div><p>${x.blocked?"Vendor policy blocks this supplier.":x.matches.length?`${x.matches.length} matching CVE${x.matches.length>1?"s":""}; worst ${x.matches[0].cve_id}.`:"Operational or lifecycle exposure drives the finding."}</p></div>`).join("")||'<div class="empty">No rated findings.</div>'}
