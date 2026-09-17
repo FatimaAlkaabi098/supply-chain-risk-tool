@@ -42,14 +42,14 @@ body.tuned #modBadge{display:inline-block}
 #summary{margin:26px 0 10px}
 .sumGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
 .sumCell{background:var(--panel2);border-radius:9px;padding:12px 14px}
-.sumCell small{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
+.sumCell small{display:block;font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
 .sumCell strong{font-size:20px;display:block;margin-top:3px}
 #sumText{white-space:pre-wrap;font-family:Consolas,ui-monospace,monospace;font-size:12.5px;
   line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:9px;
   padding:15px 17px;margin-top:12px;max-height:340px;overflow:auto}
 
 .vd{border-radius:9px;padding:12px 14px}
-.vd small{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.7px;opacity:.85}
+.vd small{display:block;font-size:12.5px;text-transform:uppercase;letter-spacing:.7px;opacity:.85}
 .vd strong{font-size:20px;display:block;margin-top:3px}
 .vd-REJECT{background:#3a1517;border:1px solid #8c2f35;color:#ffc9cd}
 .vd-CONDITIONAL{background:#3a2c0d;border:1px solid #8c6c1e;color:#ffe3ad}
@@ -62,7 +62,7 @@ body.tuned #modBadge{display:inline-block}
 .projHead{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:16px 0 4px}
 .arrowUp{color:var(--red);font-weight:700}
 .arrowDown{color:var(--green);font-weight:700}
-#simStats .simCell{background:var(--panel2);border-radius:9px;padding:11px 13px}#simStats .simCell small{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}#simStats .simCell strong{display:block;font-size:19px;margin-top:3px}#simStats .simCell.good strong{color:var(--green)}
+#simStats .simCell{background:var(--panel2);border-radius:9px;padding:11px 13px}#simStats .simCell small{display:block;font-size:12.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}#simStats .simCell strong{display:block;font-size:19px;margin-top:3px}#simStats .simCell.good strong{color:var(--green)}
 #simStats .simCell.bad strong{color:var(--red)}
 
 .stdTabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
@@ -73,9 +73,9 @@ body.tuned #modBadge{display:inline-block}
 .stdLead{color:var(--muted);font-size:13.5px;line-height:1.55;margin:0 0 13px;max-width:104ch}
 .stdKpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:9px;margin-bottom:14px}
 .stdKpi{background:rgba(22,40,66,.7);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
-.stdKpi small{display:block;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.6px}
+.stdKpi small{display:block;color:var(--muted);font-size:12.5px;text-transform:uppercase;letter-spacing:.6px}
 .stdKpi strong{display:block;font-size:20px;margin-top:3px}
-.stdKpi em{display:block;font-style:normal;color:var(--muted);font-size:11.5px;margin-top:2px}
+.stdKpi em{display:block;font-style:normal;color:var(--muted);font-size:12.5px;margin-top:2px}
 .rmGrid{display:grid;grid-template-columns:auto repeat(5,1fr);gap:4px;max-width:560px}
 .rmCell{aspect-ratio:1.5;display:flex;align-items:center;justify-content:center;border-radius:7px;
   font-weight:800;font-size:15px;color:#08121f;cursor:default}
@@ -88,7 +88,7 @@ body.tuned #modBadge{display:inline-block}
 .regWrap{overflow-x:auto;border:1px solid var(--line);border-radius:9px}
 table.reg{min-width:1180px;font-size:12.5px}
 table.reg th{text-align:left;padding:8px 9px;background:rgba(22,40,66,.85);color:var(--muted);
-  font-size:11px;text-transform:uppercase;letter-spacing:.6px;position:sticky;top:0}
+  font-size:12.5px;text-transform:uppercase;letter-spacing:.6px;position:sticky;top:0}
 table.reg td{padding:8px 9px;border-top:1px solid var(--line);vertical-align:top;line-height:1.45}
 table.reg tr:hover td{background:rgba(89,183,255,.06)}
 .lvl{display:inline-block;min-width:26px;text-align:center;border-radius:5px;padding:2px 6px;
@@ -108,7 +108,7 @@ body.light{--bg:#f4f7fb;--panel:#ffffff;--panel2:#eaf1f8;--line:#d4dfec;
   --red:#a8322a;--purple:#5c46a0;
   background:linear-gradient(180deg,#e9f0f8 0,#f4f7fb 320px)}
 body.light .card{background:#fff;border-color:var(--line);box-shadow:0 1px 2px rgba(20,40,70,.05)}
-body.light .stdKpi,body.light .metric,body.light .execKpi,body.light .simCell,body.light .simStat,
+body.light .stdKpi,body.light .metric,body.light .simCell,body.light .simStat,
 body.light .sumCell{background:#f7fafd;border-color:var(--line)}
 body.light .stdTab{background:#eef4fa;color:#42566c}
 body.light .stdTab.on{background:var(--blue);color:#fff}
@@ -200,6 +200,55 @@ body.light .gNum{color:#fff}
   color:var(--muted);border-radius:8px;padding:7px 13px;cursor:pointer;font:700 13px/1 inherit}
 @media(max-width:700px){.gFacts{grid-template-columns:1fr 1fr}.gIntro,.gStep{padding:16px}}
 @media print{.modeBar,.glossWrap{display:none}}
+
+/* ---- every surface that hardcodes a dark background needs a light one ----
+   Without these the surface stays dark while the text flips to dark ink.    */
+body.light .file,
+body.light .top button,
+body.light .actions button,
+body.light #clear,body.light #reset,body.light #tuneBtn,
+body.light #tuner,body.light .modalBox,body.light .landingCard,
+body.light input,body.light select,body.light textarea{
+  background:#fff;border-color:var(--line);color:var(--ink)}
+body.light button{border-color:var(--line)}
+body.light .primary{background:var(--blue);border-color:var(--blue);color:#fff}
+body.light .close{color:var(--muted)}
+body.light .landingCard{border-color:var(--line)}
+body.light .landingCard code{background:#eef4fa;color:#2c3e52}
+body.light .heatAxis,body.light .heatHead{color:#42566c}
+body.light .tuneHead,body.light .tuneNote{color:var(--muted)}
+body.light .arith,body.light .evidenceItem{background:#f7fafd;color:var(--ink)}
+body.light .detailGrid>div{background:#f7fafd;border-color:var(--line)}
+body.light .empty{color:var(--muted)}
+body.light .eyebrow,body.light .subtitle{color:var(--muted)}
+body.light .hbar span,body.light .geoRow{color:var(--ink)}
+body.light .legend{color:var(--muted)}
+
+/* ---- risk bands and verdicts: light tints, dark ink, same meaning -------- */
+body.light .rk-CRITICAL,body.light .vd-REJECT{background:#fdecec;border-color:#dfa49d;color:#8a1f26}
+body.light .rk-HIGH{background:#fdf2e0;border-color:#dcb87c;color:#764707}
+body.light .rk-MEDIUM{background:#faf6da;border-color:#d4ca80;color:#5b5106}
+body.light .rk-LOW,body.light .vd-APPROVE{background:#e8f6ef;border-color:#93cdb2;color:#135c3c}
+body.light .vd-CONDITIONAL{background:#fdf5e4;border-color:#dcc184;color:#76570f}
+body.light .badge.critical{background:#fdecec;color:#8a1f26}
+body.light .badge.high{background:#fdf2e0;color:#764707}
+body.light .badge.medium{background:#faf6da;color:#5b5106}
+body.light .badge.low{background:#e8f6ef;color:#135c3c}
+body.light .badge.unknown{background:#efeafb;color:#473589}
+body.light .arrowUp{color:#a8322a}body.light .arrowDown{color:#1c6f4d}
+
+/* the executive heading sits on the page background, not on its light card,
+   so it must follow the theme rather than stay dark ink */
+.executive>.sectionTitle{color:var(--ink)}
+.executive>.sectionTitle span{color:var(--muted)}
+.heatHead,.heatAxis{color:#3f5a68}
+.tuneHead{font-size:12.5px}
+
+/* .execHeat .heatHead is (0,2,0) so a bare .heatHead rule never wins */
+.execHeat .heatHead,.execHeat .heatAxis{color:#3f5a68}
+/* the simulator matrix kept a dark tile while its text flipped to dark ink */
+body.light .matrix .cell{background:#eaf1f8;color:var(--ink);border:1px solid var(--line)}
+body.light .matrix .axis{color:var(--muted)}
 </style>
 </head>
 <body>
@@ -396,6 +445,7 @@ function round(n){return Math.sign(n)*Math.round((Math.abs(n)+Number.EPSILON)*10
 function band(s){return s==null?"UNKNOWN":s>=75?"CRITICAL":s>=50?"HIGH":s>=25?"MEDIUM":"LOW"}
 function score(c,all){let id=!unk(c.vendor)&&!unk(c.model)&&!unk(c.version),matches=id?cves.filter(x=>low(x.vendor)==low(c.vendor)&&low(x.product)==low(c.model)&&inRange(c.version,x.version_affected)):[];let vulnerability=0;if(matches.length){let worst=matches.reduce((a,b)=>+b.cvss_score>+a.cvss_score?b:a);vulnerability=+worst.cvss_score*10;if(worst.epss_percentile!=="")vulnerability*=.70+.30*+worst.epss_percentile;if(matches.some(x=>low(x.kev)=="yes"))vulnerability=Math.max(vulnerability,90);vulnerability=Math.min(100,vulnerability)}let vr=policy.find(x=>x.rule_type=="vendor"&&low(x.key)==low(c.vendor));let pol=vr?(vr.risk_tier=="restricted"?100:60):0;let life=low(c.end_of_life)=="yes"?80:low(c.end_of_life)=="no"?0:40;let cr=policy.find(x=>x.rule_type=="country"&&low(x.key)==low(c.country_of_origin));let geo=unk(c.country_of_origin)||!cr?70:({1:10,2:40,3:70}[cr.risk_tier]||70);let distinct=new Set(all.filter(x=>low(x.category)==low(c.category)).map(x=>low(x.vendor))).size;let ops=low(c.validated_alternative)=="no"?50:unk(c.validated_alternative)?30:0;if(distinct==1)ops+=30;let lead=parseInt(c.lead_time_weeks);if(Number.isFinite(lead))ops+=lead>=26?30:lead>=16?20:0;ops=Math.min(100,ops);if(!id)return {c,id:false,band:"UNKNOWN",score:null,matches:[],dims:{vulnerability:0,policy:pol,lifecycle:life,geopolitical:geo,operational:ops},blocked:vr?.action=="block",vr};let dims={vulnerability,policy:pol,lifecycle:life,geopolitical:geo,operational:ops};let base=Object.entries(WEIGHTS).reduce((s,[k,w])=>s+w*dims[k],0),weighted=base*(CRIT[c.category]||1),floor=Math.max(vulnerability,pol)*TUNE.dominance,s=Math.min(100,Math.max(weighted,floor));return {c,id:true,score:round(s),band:band(s),dims,base:round(base),weighted:round(weighted),floor:round(floor),driver:weighted>=floor?"weighted profile":vulnerability>=pol?"vulnerability":"policy",matches,blocked:vr?.action=="block",vr}}
 function aggregate(all){let rr=all.map(c=>score(c,all)),rated=rr.filter(x=>x.id),mean=rated.length?rated.reduce((s,x)=>s+x.score*(CRIT[x.c.category]||1),0)/rated.reduce((s,x)=>s+(CRIT[x.c.category]||1),0):0;let counts={};all.forEach(x=>{let k=unk(x.country_of_origin)?"unknown":x.country_of_origin;counts[k]=(counts[k]||0)+1});let top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0]||["unknown",0],share=all.length?top[1]/all.length:0,penalty=share>.4?Math.min(15,(share-.4)*50):0;["bmc","firmware","cpu","gpu"].forEach(cat=>{if(new Set(all.filter(x=>x.category==cat).map(x=>low(x.vendor))).size==1&&all.some(x=>x.category==cat))penalty+=5});let worst=rated.length?Math.max(...rated.map(x=>x.score)):0,overall=Math.min(100,Math.max(mean+penalty,worst*TUNE.worstFloor)),coverage=all.length?rated.length/all.length:0,blocked=rr.filter(x=>x.blocked),critical=rr.filter(x=>x.band=="CRITICAL"),verdict=blocked.length?"REJECT":critical.length||coverage<TUNE.coverage?"APPROVE WITH CONDITIONS":"APPROVE";let reason=blocked.length?`${blocked.length} component${blocked.length>1?"s are":" is"} supplied by a vendor blocked by policy.`:critical.length?`${critical.length} critical component${critical.length>1?"s require":" requires"} mitigation before purchase.`:coverage<TUNE.coverage?`Only ${round(coverage*100)}% of components are identifiable and scored.`:"No blocked vendors, critical components, or coverage gaps were found.";return {rr,rated,mean,overall,coverage,worst,counts,top,share,penalty,blocked,critical,verdict,reason}}
+function inkOn(hex){const h=String(hex).replace('#','');const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);const f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};return (.2126*f(r)+.7152*f(g)+.0722*f(b))>.42?'#0c1a24':'#ffffff'}
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function pct(n){return `${round(n*100)}%`} function pill(b){return `<span class="badge ${b.toLowerCase()}">${b}</span>`}
 function renderExecutive(a){let rated=a.rated,actionable=rated.filter(x=>["HIGH","CRITICAL"].includes(x.band)),actionableIds=new Set(actionable.map(x=>x.c.component_id)),covered=actions.filter(x=>actionableIds.has(x.comp)).length?new Set(actions.filter(x=>actionableIds.has(x.comp)).map(x=>x.comp)).size:0;
@@ -403,7 +453,7 @@ document.querySelector("#execKpis").innerHTML=[["Actionable risk",pct(bom.length
 let vuln={};results.forEach(x=>x.matches.forEach(v=>{let k=v.cve_id;if(!vuln[k])vuln[k]={value:+v.cvss_score*10,cwe:v.cwe,count:0};vuln[k].count++}));let vrows=Object.entries(vuln).sort((a,b)=>b[1].value-a[1].value).slice(0,5),vmax=vrows[0]?.[1].value||1;document.querySelector("#topVulnerabilities").innerHTML=vrows.length?vrows.map(([k,v])=>`<div class="hbar"><span title="${esc(k)}">${esc(k)} · ${esc(v.cwe)}</span><span class="htrack"><i style="width:${v.value/vmax*100}%"></i></span><span class="hval">${round(v.value)}</span></div>`).join(""):'<div class="empty" style="color:#52717c">No component in this BOM matches a known vulnerability. The Vulnerability dimension therefore scores 0 across the board.</div>';
 let rr=[...rated].sort((x,y)=>y.score-x.score).slice(0,5),rmax=rr[0]?.score||1;document.querySelector("#topRisks").innerHTML=rr.length?rr.map(x=>`<div class="hbar"><span title="${esc(x.c.component_name)}">${esc(x.c.component_id)} · ${esc(x.c.component_name)}</span><span class="htrack"><i style="width:${x.score/rmax*100}%;background:${x.band=="CRITICAL"?"#bd2631":x.band=="HIGH"?"#d87922":"#146ba4"}"></i></span><span class="hval">${round(x.score)}</span></div>`).join(""):'<div class="empty" style="color:#52717c">No rated components.</div>';
 let bands=["CRITICAL","HIGH","MEDIUM","LOW","UNKNOWN"],cols=["#bd2631","#e18a29","#7ebc3d","#3b8ec0","#8d72bd"],bc=bands.map(b=>results.filter(x=>x.band==b).length),total=bom.length||1,stops=[],cursor=0;bc.forEach((n,i)=>{let start=cursor/total*360;cursor+=n;stops.push(`${cols[i]} ${start}deg ${cursor/total*360}deg`)});document.querySelector("#riskBreakdown").innerHTML=`<div class="donutWrap"><div class="donut" style="background:conic-gradient(${stops.join(",")})"></div><div class="legend">${bands.map((b,i)=>`<div><i class="dot" style="background:${cols[i]}"></i>${b} <b>${bc[i]}</b> <span>(${pct(bc[i]/total)})</span></div>`).join("")}</div></div>`;
-let cells=[],sev=["Low","Medium","High","Critical"],lik=["Very high","High","Medium","Low"];for(let li=3;li>=0;li--){let row=[];for(let se=0;se<4;se++){let n=0,ids=[];results.forEach(x=>x.matches.forEach(v=>{let s=+v.cvss_score,l=+v.epss_percentile;if((s<4?0:s<7?1:s<9?2:3)==se&&(l<.25?0:l<.5?1:l<.75?2:3)==li){n++;ids.push(x.c.component_id)}}));let bg=["#93c94f","#e3b83e","#e17b37","#c62b36"][Math.min(3,Math.floor((n||0)/2))];row.push(`<div class="heatCell" style="background:${n?bg:"#dcebef"};color:${n?"#fff":"#53717a"}" onclick="openDetail('${ids[0]||""}')">${n||"·"}</div>`)}cells.push(`<div class="heatAxis">${lik[3-li]}</div>`+row.join(""))}document.querySelector("#execHeat").innerHTML='<div class="execHeat"><div class="heatHead"></div>'+sev.map(x=>`<div class="heatHead">${x}</div>`).join("")+cells.join("")+'</div><div class="muted" style="color:#aec3de;font-size:12.5px;margin-top:9px">Columns: CVSS severity · rows: EPSS percentile likelihood. An empty grid means no component matched a known vulnerability.</div>';
+let cells=[],sev=["Low","Medium","High","Critical"],lik=["Very high","High","Medium","Low"];for(let li=3;li>=0;li--){let row=[];for(let se=0;se<4;se++){let n=0,ids=[];results.forEach(x=>x.matches.forEach(v=>{let s=+v.cvss_score,l=+v.epss_percentile;if((s<4?0:s<7?1:s<9?2:3)==se&&(l<.25?0:l<.5?1:l<.75?2:3)==li){n++;ids.push(x.c.component_id)}}));let bg=["#93c94f","#e3b83e","#e17b37","#c62b36"][Math.min(3,Math.floor((n||0)/2))];row.push(`<div class="heatCell" style="background:${n?bg:"#dcebef"};color:${n?inkOn(bg):"#3f5a68"}" onclick="openDetail('${ids[0]||""}')">${n||"·"}</div>`)}cells.push(`<div class="heatAxis">${lik[3-li]}</div>`+row.join(""))}document.querySelector("#execHeat").innerHTML='<div class="execHeat"><div class="heatHead"></div>'+sev.map(x=>`<div class="heatHead">${x}</div>`).join("")+cells.join("")+'</div><div class="muted" style="color:#3f5a68;font-size:12.5px;margin-top:9px">Columns: CVSS severity · rows: EPSS percentile likelihood. An empty grid means no component matched a known vulnerability.</div>';
 let types=["PATCH","REPLACE","REFRESH","QUALIFY","IDENTIFY"],pcols=["#287db1","#bc3f4e","#d8872c","#65a84b","#8e70be"],pc=types.map(t=>actions.filter(x=>x.type==t).length),pt=actions.length||1,ps=[],pcur=0;pc.forEach((n,i)=>{let st=pcur/pt*360;pcur+=n;ps.push(`${pcols[i]} ${st}deg ${pcur/pt*360}deg`)});document.querySelector("#planBreakdown").innerHTML=actions.length?`<div class="donutWrap"><div class="donut" style="background:conic-gradient(${ps.join(",")})"></div><div class="legend planLegend">${types.map((t,i)=>pc[i]?`<div><i class="dot" style="background:${pcols[i]}"></i>${t} <b>${pc[i]}</b></div>`:"").join("")}</div></div>`:'<div class="empty" style="color:#52717c">No remediation required.</div>'}
 function render(){if(!bom.length){document.body.classList.add('empty');document.body.classList.remove('tuned');document.querySelector('#tuner')?.classList.remove('open');return}document.body.classList.remove('empty');let a=aggregate(bom);results=a.rr;document.body.dataset.verdict=a.verdict;let bc=a.verdict=="REJECT"?"reject":a.verdict=="APPROVE"?"approve":"conditional";let banner=document.querySelector("#banner");banner.className=`banner ${bc}`;banner.innerHTML=`<div><div class="eyebrow">Procurement decision</div><div class="verdict">${a.verdict}</div><div class="reason">${a.reason}</div></div><div class="bannerScore"><div class="muted">Overall risk index</div><div class="bigscore">${round(a.overall)} <small>/ 100</small></div></div>`;
 document.querySelector("#metrics").innerHTML=[["Overall risk",round(a.overall)],["Normalised",round(a.overall/100).toFixed(2)],["Worst",a.worst?round(a.worst):"—"],["Components",bom.length],["Critical",a.critical.length],["High",results.filter(x=>x.band=="HIGH").length],["Not scored",bom.length-a.rated.length],["Data confidence",pct(a.coverage)]].map(x=>`<div class="metric"><small>${x[0]}</small><strong class="${String(x[1]).length>8?"tiny":""}">${x[1]}</strong></div>`).join("");
