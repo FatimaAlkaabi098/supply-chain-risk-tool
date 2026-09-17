@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RiskLab — CSF 4003 Security and Risk Management</title>
+<style>
+:root{--bg:#f4f7fb;--panel:#fff;--panel2:#eaf1f8;--line:#d4dfec;--ink:#16202c;
+  --muted:#54657a;--blue:#12628f;--green:#1c6f4d;--amber:#8f5a0e;--red:#a8322a}
+body.dark{--bg:#09111f;--panel:#101d31;--panel2:#16283f;--line:#28405e;--ink:#edf4ff;
+  --muted:#aec3de;--blue:#59b7ff;--green:#4ed2a0;--amber:#f4bd62;--red:#ff6f7e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.6 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}
+.shell{max-width:1200px;margin:auto;padding:22px 20px 70px}
+h1,h2,h3{letter-spacing:-.01em;margin:0}
+button,select,input,textarea{font:inherit;color:inherit}
+.top{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.brand{font-size:26px;font-weight:850}.brand span{color:var(--blue)}
+.tagline{color:var(--muted);font-size:14px;max-width:74ch;margin-top:3px}
+.spacer{flex:1}
+.btn{background:var(--panel);border:1px solid var(--line);border-radius:9px;
+  padding:9px 15px;font-weight:700;font-size:14px;cursor:pointer}
+.btn:hover{border-color:var(--blue)}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+body.dark .btn.primary{color:#08121f}
+.btn.sm{padding:6px 11px;font-size:13.5px}
+.btn.ghost{background:transparent}
+.modes{display:flex;gap:4px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:11px;padding:4px;margin-bottom:20px;flex-wrap:wrap}
+.modes button{background:none;border:0;color:var(--muted);font-weight:700;font-size:14.5px;
+  padding:10px 17px;border-radius:8px;cursor:pointer}
+.modes button.on{background:var(--blue);color:#fff}
+body.dark .modes button.on{color:#08121f}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:13px;
+  padding:20px 22px;margin-bottom:15px}
+.pHead{display:flex;align-items:flex-start;gap:13px}
+.pNum{flex:0 0 auto;width:34px;height:34px;border-radius:10px;background:var(--blue);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px}
+body.dark .pNum{color:#08121f}
+.pTitle{flex:1}.pTitle h2{font-size:18px}
+.pTitle p{margin:3px 0 0;color:var(--muted);font-size:14px}
+.hint{background:var(--panel2);border:1px solid var(--line);color:var(--blue);border-radius:8px;
+  padding:7px 12px;font-weight:700;font-size:13.5px;cursor:pointer;white-space:nowrap}
+.hint:hover{background:var(--blue);color:#fff}
+body.dark .hint:hover{color:#08121f}
+.body{margin-top:14px}
+.row{display:flex;gap:9px;flex-wrap:wrap;align-items:flex-end}
+input[type=text],input[type=number],textarea,select{background:var(--bg);
+  border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:14px;width:100%}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--blue);outline-offset:-1px}
+label.fld{display:block;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:4px}
+.grid{display:grid;gap:11px}
+.scenarios{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.scn{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:15px;
+  cursor:pointer;text-align:left;color:inherit}
+.scn:hover{border-color:var(--blue)}
+.scn.on{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
+.scn b{display:block;font-size:15px;margin-bottom:5px}
+.scn p{margin:0;color:var(--muted);font-size:13.5px}
+.scnText{background:var(--panel2);border-left:3px solid var(--blue);border-radius:9px;
+  padding:14px 16px;margin-top:13px;font-size:14.5px;line-height:1.7}
+table{border-collapse:collapse;width:100%;font-size:14px}
+.tWrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;margin-top:12px}
+th{text-align:left;background:var(--panel2);color:var(--muted);font-size:12.5px;
+  text-transform:uppercase;letter-spacing:.5px;padding:9px 10px;white-space:nowrap}
+td{padding:8px 10px;border-top:1px solid var(--line);vertical-align:top}
+td select,td input{min-width:70px}
+.lvl{display:inline-block;min-width:32px;text-align:center;border-radius:6px;padding:3px 9px;
+  font-weight:800;color:#fff}
+.tag{display:inline-block;background:var(--panel2);border:1px solid var(--line);
+  border-radius:20px;padding:2px 10px;font-size:12.5px;color:var(--muted)}
+.feedback{border-radius:10px;padding:13px 16px;margin-top:13px;font-size:14.5px;line-height:1.65}
+.fb-good{background:#e8f6ef;border:1px solid #93cdb2;color:#135c3c}
+.fb-part{background:#fdf5e4;border:1px solid #dcc184;color:#76570f}
+.fb-none{background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+body.dark .fb-good{background:#123227;border-color:#2c7d57;color:#a9efcd}
+body.dark .fb-part{background:#3a2c0d;border-color:#8c6c1e;color:#ffe3ad}
+.mx{display:grid;grid-template-columns:auto repeat(5,1fr);gap:4px;max-width:540px;margin-top:12px}
+.mc{aspect-ratio:1.7;display:flex;align-items:center;justify-content:center;border-radius:8px;
+  font-weight:800;font-size:15px;color:#fff}
+.mc.zero{background:var(--panel2);color:var(--muted);font-weight:600}
+.ax{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12.5px;font-weight:700}
+.axLabel{color:var(--muted);font-size:13px;margin-top:9px;line-height:1.7}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px;margin-top:13px}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.stat small{display:block;color:var(--muted);font-size:12.5px}
+.stat strong{display:block;font-size:21px;margin-bottom:2px}
+.empty{color:var(--muted);font-size:14px;padding:12px 0}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+/* study guide */
+.sgStep{background:var(--panel);border:1px solid var(--line);border-radius:13px;
+  padding:20px 22px;margin-bottom:14px;scroll-margin-top:14px}
+.sgStep.flash{animation:fl 1.8s ease-out}
+@keyframes fl{0%{box-shadow:0 0 0 3px var(--blue)}100%{box-shadow:0 0 0 0 transparent}}
+.sgStep h3{font-size:17px}.sgStep .clause{color:var(--muted);font-size:13px;margin-bottom:12px}
+.sgStep p{font-size:14.5px;line-height:1.7}.sgStep p b{color:var(--blue)}
+.keyline{background:var(--panel2);border-left:3px solid var(--amber);border-radius:9px;
+  padding:13px 16px;margin-top:12px;font-size:14.5px;line-height:1.7}
+.glass{position:fixed;inset:0;background:rgba(6,14,26,.72);z-index:60;display:none;
+  align-items:flex-start;justify-content:center;padding:30px 16px;overflow:auto}
+.glass.open{display:flex}
+.gCard{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  max-width:740px;width:100%;padding:24px 26px}
+.gCard dt{font-weight:800;margin-top:13px}
+.gCard dd{margin:3px 0 0;color:var(--muted);font-size:14px;line-height:1.65}
+.foot{color:var(--muted);font-size:13px;text-align:center;margin-top:26px;line-height:1.7}
+@media(max-width:640px){.shell{padding:14px 11px 50px}.panel{padding:16px}}
+@media print{.modes,.hint,.btn,.foot{display:none}.panel{break-inside:avoid}}
+</style>
+</head>
+<body>
+<main class="shell">
+<div class="top">
+  <div><div class="brand">Risk<span>Lab</span></div>
+  <div class="tagline">A practice workspace for <b>CSF 4003 Security and Risk Management</b>.
+    You identify the assets and you decide every rating — the tool only does the arithmetic,
+    and tells you when something does not look finished.</div></div>
+  <div class="spacer"></div>
+  <button class="btn sm" id="glossBtn">? Glossary</button>
+  <button class="btn sm" id="themeBtn">☽ Dark</button>
+</div>
+
+<div class="modes">
+  <button data-mode="practice" class="on">✎ Practice</button>
+  <button data-mode="guide">▣ Study guide</button>
+</div>
+
+<section id="practice"></section>
+<section id="guide" hidden></section>
+
+<div class="foot">Everything runs in your browser and your work is saved on this device only.
+  Use <b>Print</b> to hand in, or <b>Export CSV</b> to open in Excel.<br>
+  Scales, formulas and thresholds follow the CSF 4003 slides (Chapters 1–3).</div>
+</main>
+
+<div class="glass" id="glass"><div class="gCard">
+  <button class="btn sm" style="float:right" onclick="document.getElementById('glass').classList.remove('open')">Close</button>
+  <h2>Glossary</h2>
+  <p style="color:var(--muted);font-size:14px">Definitions as used in CSF 4003.</p>
+  <dl>
+  <dt>Information asset</dt><dd>Anything the organisation values: people, procedures, data and information, software, hardware, or networking elements.</dd>
+  <dt>Threat</dt><dd>A potential risk to an information asset. A threat is the possibility; an attack is it actually happening.</dd>
+  <dt>Attack</dt><dd>An ongoing act against an asset that could result in a loss.</dd>
+  <dt>Threat agent</dt><dd>The actor or attacker who uses an exploit to take advantage of a vulnerability.</dd>
+  <dt>Vulnerability</dt><dd>A specific opportunity that a threat agent can exploit to attack an information asset — a weakness where controls are absent or no longer effective.</dd>
+  <dt>Exploit</dt><dd>The technique or tool used to take advantage of a vulnerability.</dd>
+  <dt>Control</dt><dd>A protection mechanism already in place that prevents or impedes exploitation.</dd>
+  <dt>Risk</dt><dd>The chance of loss to an information asset, formed by a threat acting on a vulnerability.</dd>
+  <dt>Risk management</dt><dd>Discovering and assessing the risks to an organisation's operations and determining how they can be controlled or mitigated.</dd>
+  <dt>Risk identification</dt><dd>Listing and prioritising information assets, threats and vulnerabilities.</dd>
+  <dt>CIA triangle</dt><dd>Confidentiality, Integrity and Availability — the three core characteristics that give information value.</dd>
+  <dt>Confidentiality</dt><dd>Limiting access to information to authorised individuals only.</dd>
+  <dt>Integrity</dt><dd>Only authorised individuals can change or delete the data.</dd>
+  <dt>Availability</dt><dd>Information is there when an authorised person asks for it.</dd>
+  <dt>Weighted factor analysis</dt><dd>Ranking assets by scoring each against weighted criteria, then sorting by the total weighted score.</dd>
+  <dt>TVA worksheet</dt><dd>Threats–Vulnerabilities–Assets. The table pairing each asset with the threats it faces and the vulnerability each threat would use.</dd>
+  <dt>Likelihood</dt><dd>The probability that a threat will successfully exploit a vulnerability, and how often that might occur.</dd>
+  <dt>Impact / Severity</dt><dd>How much harm results if the exploit succeeds.</dd>
+  <dt>Risk rating</dt><dd>Likelihood × Impact, giving a score from 1 to 25.</dd>
+  <dt>Qualitative analysis</dt><dd>Rating risk with descriptive levels rather than money. Practical when data or budget is limited.</dd>
+  <dt>Quantitative analysis</dt><dd>Rating risk with hard numbers and money, so it can be compared against the cost of a control.</dd>
+  <dt>SLE</dt><dd>Single Loss Expectancy — what one occurrence costs.</dd>
+  <dt>ARO</dt><dd>Annualised Rate of Occurrence — how many times a year it is expected.</dd>
+  <dt>ALE</dt><dd>Annualised Loss Expectancy = SLE × ARO — the expected cost per year.</dd>
+  <dt>Residual risk</dt><dd>The risk that remains after a control has been applied. It is rarely zero.</dd>
+  </dl>
+</div></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════
+   ▓▓  COURSE CONTENT — taken from the CSF 4003 slides, Chapters 1–3.  ▓▓
+   Edit here if a list differs from your deck; nothing below needs changing.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* CH2 slide 14 — the six categories of information asset */
+const ASSET_CATEGORIES = ["People","Procedures","Data and information","Software","Hardware","Networking"];
+
+/* CH1 slide 31 — Whitman's twelve threat categories.
+   NOTE: that slide is a picture, so this list could not be read from the deck.
+   Check it against your slide and correct any wording here if needed. */
+const THREAT_CATEGORIES = [
+  "Compromises to intellectual property","Deviations in quality of service","Espionage or trespass",
+  "Forces of nature","Human error or failure","Information extortion","Sabotage or vandalism",
+  "Software attacks","Technical hardware failures or errors","Technical software failures or errors",
+  "Technological obsolescence","Theft"];
+
+/* CH3 slide 21 — likelihood and impact scales, 1 to 5 */
+const LIKELIHOOD = {1:"Rare",2:"Unlikely",3:"Possible",4:"Likely",5:"Almost certain"};
+const IMPACT     = {1:"Insignificant",2:"Minor",3:"Moderate",4:"Major",5:"Catastrophic"};
+
+/* CH3 slide 21 — colour thresholds for the risk score */
+const RISK_BANDS = [[16,"High","#a8322a"],[7,"Medium","#8a6a0a"],[0,"Low","#1c6f4d"]];
+
+/* CH3 slide 36 — qualitative likelihood scale */
+const LIKELIHOOD_Q = [
+ ["Negligible","Threat source is small and trusted; controls prevent exploitation without physical access; needs significant inside knowledge, or is purely theoretical."],
+ ["Low","Threat source lacks motivation or capability, or controls significantly impede exploitation."],
+ ["Moderate","Threat source is motivated and capable, but controls may impede successful exploitation."],
+ ["High","Threat source is highly motivated and very capable, and controls are ineffective."],
+ ["Very high","Exposure is apparent through casual use or public information, and the weakness is publicly accessible on the internet."]];
+
+/* CH3 slide 28 — qualitative severity scale */
+const SEVERITY_Q = [
+ ["Low","A deviation from recommended practice, or a missing governance activity, with no direct exposure."],
+ ["Moderate","May indirectly contribute to unauthorised activity, or has no known attack vector. May degrade service performance."],
+ ["High","May allow limited access to or control of the application, system or communication. May cause a short disruption for part of the user community."],
+ ["Critical","May allow full access to or control of the application, system or communication, including all data. May cause a prolonged outage affecting all users."]];
+
+/* CH2 slide 25 — default weighted-factor criteria (weights must total 1.00) */
+const DEFAULT_CRITERIA = [
+  {id:"c1",name:"Confidentiality",weight:0.30},
+  {id:"c2",name:"Integrity",weight:0.30},
+  {id:"c3",name:"Availability",weight:0.25},
+  {id:"c4",name:"Legal impact",weight:0.15}];
+
+const SCENARIOS = [
+ {id:"clinic",title:"A small dental clinic",blurb:"6 staff, paper and digital records.",
+  text:`The clinic keeps patient records on one reception computer, which the receptionist leaves logged in
+   all day. Appointments are also written in a paper diary on the desk. A Wi-Fi router is shared with the
+   waiting room, using the password printed on a card by the door. The dentist takes a laptop home each night
+   with treatment notes on it. Backups go to a USB stick once a week, kept in the same drawer as the spare.
+   The receptionist has had no security training.`,
+  assets:["patient records","reception computer","paper diary","wi-fi router","laptop","backup",
+          "usb stick","receptionist","appointment"]},
+ {id:"shop",title:"An online clothes shop",blurb:"A small business selling through its own website.",
+  text:`The shop sells through a website hosted by an external provider. Customer names, addresses and order
+   history sit in the shop's database. Card payments go through a separate payment company, so the shop never
+   sees card numbers. Two staff share one administrator login. Product photographs exist only on the owner's
+   phone. The shop's email account is used for both orders and password resets. There is no written procedure
+   for what to do if the site goes down.`,
+  assets:["website","customer database","customer data","administrator login","product photographs",
+          "phone","email account","payment provider","procedure","staff"]},
+ {id:"school",title:"A school computer room",blurb:"30 shared machines used by students all day.",
+  text:`The room has 30 desktop computers shared by students, all using the same guest account. Coursework is
+   saved to a shared network drive. The teacher's computer holds marks and attendance and sits in the same
+   room. There is a projector and a cupboard of spare cables. The door is locked at night but the window is
+   often left open. Students bring their own USB sticks to move files, and the technician visits once a week.`,
+  assets:["desktop computers","guest account","network drive","coursework","teacher's computer","marks",
+          "attendance","projector","usb sticks","technician","students"]}];
+
+/* ══════════════════════ end of course content ═══════════════════════ */
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const uid=()=>Math.random().toString(36).slice(2,9);
+function band(n){for(const[t,l,c]of RISK_BANDS)if(n>=t)return{label:l,colour:c};return{label:"Low",colour:"#1c6f4d"}}
+
+let S={scenario:null,assets:[],criteria:DEFAULT_CRITERIA.map(c=>({...c})),risks:[],sle:"",aro:""};
+try{const r=localStorage.getItem("risklab4003");if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
+if(!S.criteria||!S.criteria.length)S.criteria=DEFAULT_CRITERIA.map(c=>({...c}));
+function save(){try{localStorage.setItem("risklab4003",JSON.stringify(S))}catch(e){}}
+
+function panel(n,title,lead,go,body){
+ return `<div class="panel"><div class="pHead"><div class="pNum">${n}</div>
+   <div class="pTitle"><h2>${title}</h2><p>${lead}</p></div>
+   <button class="hint" data-go="${go}">? Hint</button></div>
+   <div class="body">${body}</div></div>`}
+
+/* ───────────────────────────── practice ───────────────────────────── */
+function renderPractice(){
+ const sc=SCENARIOS.find(x=>x.id===S.scenario);
+ let h="";
+
+ h+=panel(1,"Choose where to start","Practise on a scenario and get feedback, or start blank for your own coursework.","sg-assets",
+  `<div class="grid scenarios">
+    ${SCENARIOS.map(x=>`<button class="scn ${S.scenario===x.id?"on":""}" data-scn="${x.id}">
+      <b>${esc(x.title)}</b><p>${esc(x.blurb)}</p></button>`).join("")}
+    <button class="scn ${S.scenario===null?"on":""}" data-scn=""><b>Blank — my own organisation</b>
+      <p>Build the whole assessment yourself.</p></button></div>
+   ${sc?`<div class="scnText">${esc(sc.text).replace(/\s+/g," ")}</div>`:""}
+   ${(S.assets.length||S.risks.length)?`<div class="row" style="margin-top:13px">
+     <button class="btn sm ghost" id="clearAll">Clear my work</button></div>`:""}`);
+
+ h+=panel(2,"Identify the information assets",
+  "Assets are not only equipment. The course lists six kinds — people, procedures, data and information, software, hardware, networking.","sg-assets",
+  `<div class="row">
+     <div style="flex:2;min-width:200px"><label class="fld" for="aName">Asset</label>
+       <input type="text" id="aName" placeholder="e.g. patient records" autocomplete="off"></div>
+     <div style="flex:1;min-width:160px"><label class="fld" for="aCat">Category</label>
+       <select id="aCat">${ASSET_CATEGORIES.map(c=>`<option>${c}</option>`).join("")}</select></div>
+     <button class="btn primary" id="addAsset">+ Add asset</button></div>
+   ${S.assets.length?assetTable():`<div class="empty">No assets yet.</div>`}
+   ${assetFeedback(sc)}`);
+
+ h+=panel(3,"Prioritise the assets — weighted factor analysis",
+  "Score each asset 0–5 against the criteria. The tool multiplies by the weights and ranks them.","sg-weight",
+  S.assets.length?weightTable():`<div class="empty">Add an asset first.</div>`);
+
+ h+=panel(4,"Build the TVA worksheet",
+  "For each asset, pick the threat it faces and name the vulnerability that threat would use.","sg-tva",
+  S.assets.length?`<div class="row">
+     <div style="flex:1;min-width:150px"><label class="fld">Asset</label>
+       <select id="rAsset">${S.assets.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("")}</select></div>
+     <div style="flex:1;min-width:190px"><label class="fld">Threat category</label>
+       <select id="rThreat">${THREAT_CATEGORIES.map(t=>`<option>${esc(t)}</option>`).join("")}</select></div>
+     <div style="flex:1;min-width:190px"><label class="fld">Vulnerability</label>
+       <input type="text" id="rVuln" placeholder="e.g. left logged in all day"></div>
+     <div style="flex:1;min-width:170px"><label class="fld">Existing control</label>
+       <input type="text" id="rCtrl" placeholder="e.g. screen lock"></div>
+     <button class="btn primary" id="addRisk">+ Add</button></div>`
+   :`<div class="empty">Add an asset first.</div>`);
+
+ h+=panel(5,"Rate likelihood and impact","Risk Rating = Likelihood × Impact. You choose both numbers; the tool only multiplies.","sg-rate",
+  S.risks.length?rateTable():`<div class="empty">Add a TVA row first.</div>`);
+
+ h+=panel(6,"Read the 5 × 5 risk matrix","Rows are Impact, columns are Likelihood. Top right is the worst place to be.","sg-matrix",
+  S.risks.some(r=>r.l&&r.i)?matrixHtml():`<div class="empty">Rate a risk to fill the matrix.</div>`);
+
+ h+=panel(7,"Quantitative check — ALE = SLE × ARO",
+  "The qualitative rating says which risk matters most. This says what one of them costs per year.","sg-quant",
+  quantHtml());
+
+ h+=panel(8,"Your assessment","Everything you decided, in one place. Print it or export to Excel.","sg-summary",summaryHtml());
+
+ $("#practice").innerHTML=h; wire();
+}
+
+function assetTable(){
+ return `<div class="tWrap"><table><thead><tr><th>Asset</th><th>Category</th><th></th></tr></thead><tbody>
+  ${S.assets.map(a=>`<tr><td><b>${esc(a.name)}</b></td><td><span class="tag">${esc(a.cat)}</span></td>
+   <td style="text-align:right"><button class="btn sm ghost" data-del-asset="${a.id}">×</button></td></tr>`).join("")}
+  </tbody></table></div>`}
+
+function assetFeedback(sc){
+ if(!S.assets.length) return "";
+ const cats=new Set(S.assets.map(a=>a.cat));
+ const missingCats=ASSET_CATEGORIES.filter(c=>!cats.has(c));
+ if(!sc) return `<div class="feedback fb-none">Your own organisation, so there is no answer key.
+   You have used ${cats.size} of the 6 asset categories${missingCats.length?` — nothing yet under
+   <b>${missingCats.join(", ").toLowerCase()}</b>. Worth checking whether that is really true.`:`, which is all of them.`}</div>`;
+ const named=S.assets.map(a=>a.name.toLowerCase());
+ const found=sc.assets.filter(k=>named.some(n=>n.includes(k)||k.includes(n)));
+ const p=found.length/sc.assets.length;
+ const cls=p>=0.75?"fb-good":p>=0.4?"fb-part":"fb-none";
+ return `<div class="feedback ${cls}">You have found <b>${found.length} of about ${sc.assets.length}</b>
+   assets in this scenario, across ${cats.size} of the 6 categories.
+   ${p>=0.75?"That is a thorough list."
+    :`Read the text again. Assets are not only equipment — the course counts <b>people</b>,
+      <b>procedures</b> and <b>data</b> as assets too${missingCats.length?`, and you have nothing yet under
+      ${missingCats.join(", ").toLowerCase()}`:""}.`}</div>`}
+
+function weightTable(){
+ const total=S.criteria.reduce((s,c)=>s+(+c.weight||0),0);
+ const scored=S.assets.map(a=>{
+   const t=S.criteria.reduce((s,c)=>s+((+((a.scores||{})[c.id])||0)*(+c.weight||0)),0);
+   return {a,total:t}}).sort((x,y)=>y.total-x.total);
+ return `<div class="row" style="margin-bottom:6px">
+   ${S.criteria.map(c=>`<div style="flex:1;min-width:120px">
+     <label class="fld">${esc(c.name)} — weight</label>
+     <input type="number" step="0.05" min="0" max="1" value="${c.weight}" data-crit="${c.id}"></div>`).join("")}
+   </div>
+   <div class="axLabel" style="margin-top:0">Weights total <b>${total.toFixed(2)}</b>${
+     Math.abs(total-1)>0.001?` — the course uses weights that add up to 1.00, so adjust these.`:` ✓`}</div>
+  <div class="tWrap"><table><thead><tr><th>Rank</th><th>Asset</th>
+   ${S.criteria.map(c=>`<th>${esc(c.name)}<br><span style="font-weight:400;text-transform:none">0–5</span></th>`).join("")}
+   <th>Weighted score</th></tr></thead><tbody>
+   ${scored.map((x,i)=>`<tr><td><b>${i+1}</b></td><td><b>${esc(x.a.name)}</b><br>
+     <span class="tag">${esc(x.a.cat)}</span></td>
+     ${S.criteria.map(c=>`<td><select data-score="${x.a.id}" data-crit="${c.id}">
+       <option value="">–</option>
+       ${[0,1,2,3,4,5].map(n=>`<option value="${n}" ${((x.a.scores||{})[c.id])==n?"selected":""}>${n}</option>`).join("")}
+       </select></td>`).join("")}
+     <td><b style="font-size:16px">${x.total.toFixed(2)}</b></td></tr>`).join("")}
+   </tbody></table></div>
+   <div class="axLabel">0 = not applicable · 1 = not important · 5 = critically important.
+     Ranked highest weighted score first — that is your priority order.</div>`}
+
+function rateTable(){
+ return `<div class="tWrap"><table><thead><tr><th>Asset</th><th>Threat</th><th>Vulnerability</th>
+   <th>Control</th><th>Likelihood</th><th>Impact</th><th>Risk rating</th><th></th></tr></thead><tbody>
+  ${S.risks.map(r=>{const a=S.assets.find(x=>x.id===r.assetId);
+   const lvl=(r.l&&r.i)?r.l*r.i:null,b=lvl?band(lvl):null;
+   return `<tr><td><b>${esc(a?a.name:"—")}</b></td><td>${esc(r.threat)}</td>
+    <td>${esc(r.vuln)||'<span style="color:var(--muted)">—</span>'}</td>
+    <td>${esc(r.ctrl)||'<span style="color:var(--muted)">—</span>'}</td>
+    <td><select data-set="l" data-id="${r.id}"><option value="">–</option>
+      ${[1,2,3,4,5].map(n=>`<option value="${n}" ${r.l==n?"selected":""}>${n} ${LIKELIHOOD[n]}</option>`).join("")}</select></td>
+    <td><select data-set="i" data-id="${r.id}"><option value="">–</option>
+      ${[1,2,3,4,5].map(n=>`<option value="${n}" ${r.i==n?"selected":""}>${n} ${IMPACT[n]}</option>`).join("")}</select></td>
+    <td>${lvl?`<span class="lvl" style="background:${b.colour}">${lvl}</span>
+      <div style="color:var(--muted);font-size:12.5px;margin-top:3px">${b.label}</div>`
+      :'<span style="color:var(--muted)">rate both</span>'}</td>
+    <td style="text-align:right"><button class="btn sm ghost" data-del-risk="${r.id}">×</button></td></tr>`}).join("")}
+  </tbody></table></div>
+  <div class="legend"><span><i style="background:#1c6f4d"></i>Low — 6 or less</span>
+    <span><i style="background:#8a6a0a"></i>Medium — 7 to 15</span>
+    <span><i style="background:#a8322a"></i>High — more than 15</span></div>
+  <div class="axLabel">Likelihood ${[1,2,3,4,5].map(n=>`<b>${n}</b> ${LIKELIHOOD[n]}`).join(" · ")}<br>
+    Impact ${[1,2,3,4,5].map(n=>`<b>${n}</b> ${IMPACT[n]}`).join(" · ")}</div>`}
+
+function matrixHtml(){
+ const g=Array.from({length:5},()=>[0,0,0,0,0]);
+ S.risks.forEach(r=>{if(r.l&&r.i)g[r.i-1][r.l-1]++});
+ let c="";
+ for(let i=4;i>=0;i--){c+=`<div class="ax">${i+1}</div>`;
+  for(let l=0;l<5;l++){const n=g[i][l],b=band((i+1)*(l+1));
+   c+=n?`<div class="mc" style="background:${b.colour}" title="${b.label} · ${(i+1)*(l+1)}">${n}</div>`
+       :`<div class="mc zero" title="${b.label} · ${(i+1)*(l+1)}">·</div>`}}
+ c+=`<div class="ax"></div>`+[1,2,3,4,5].map(l=>`<div class="ax">${l}</div>`).join("");
+ return `<div class="mx">${c}</div><div class="axLabel">↑ Impact &nbsp;·&nbsp; Likelihood →</div>`}
+
+function quantHtml(){
+ const sle=+S.sle||0, aro=+S.aro||0, ale=sle*aro;
+ return `<div class="row">
+   <div style="flex:1;min-width:170px"><label class="fld">Single Loss Expectancy (SLE) — cost of one occurrence, AED</label>
+     <input type="number" id="sle" min="0" value="${S.sle}" placeholder="e.g. 1000"></div>
+   <div style="flex:1;min-width:170px"><label class="fld">Annualised Rate of Occurrence (ARO) — times per year</label>
+     <input type="number" id="aro" min="0" step="0.01" value="${S.aro}" placeholder="e.g. 9"></div>
+   </div>
+   ${(sle&&aro)?`<div class="feedback fb-none" style="margin-top:13px">
+     <b>ALE = SLE × ARO = ${sle.toLocaleString()} × ${aro} =
+     AED ${Math.round(ale).toLocaleString()}</b> per year.<br>
+     If a control costs less than this each year, it pays for itself. If it costs more, you are spending
+     more than the risk is worth.</div>`
+   :`<div class="axLabel">Enter both to calculate. ARO can be less than 1 — losing one laptop every
+     3 years is an ARO of 0.33.</div>`}`}
+
+function summaryHtml(){
+ const done=S.risks.filter(r=>r.l&&r.i);
+ if(!done.length) return `<div class="empty">Rate at least one risk to see your summary.</div>`;
+ const lv=done.map(r=>r.l*r.i), mean=lv.reduce((a,b)=>a+b,0)/lv.length;
+ const high=done.filter(r=>r.l*r.i>15).length, med=done.filter(r=>{const v=r.l*r.i;return v>=7&&v<=15}).length;
+ const worst=done.reduce((a,b)=>a.l*a.i>=b.l*b.i?a:b);
+ const wa=S.assets.find(x=>x.id===worst.assetId);
+ const gaps=[];
+ if(S.risks.some(r=>!r.l||!r.i)) gaps.push("some TVA rows are not rated");
+ if(S.assets.some(a=>!a.scores||!S.criteria.every(c=>(a.scores||{})[c.id]!==undefined&&(a.scores||{})[c.id]!==""))) gaps.push("some assets are not fully scored in the weighted analysis");
+ return `<div class="stats">
+   <div class="stat"><strong>${S.assets.length}</strong><small>assets identified</small></div>
+   <div class="stat"><strong>${S.risks.length}</strong><small>TVA rows</small></div>
+   <div class="stat"><strong>${mean.toFixed(1)}</strong><small>average rating, of 25</small></div>
+   <div class="stat"><strong>${high}</strong><small>high risk (&gt;15)</small></div>
+   <div class="stat"><strong>${med}</strong><small>medium risk (7–15)</small></div></div>
+  <div class="feedback ${high?"fb-part":"fb-good"}" style="margin-top:13px">
+   Your highest risk is <b>${esc(wa?wa.name:"—")}</b> — ${esc(worst.threat).toLowerCase()} —
+   at likelihood ${worst.l} (${LIKELIHOOD[worst.l]}) × impact ${worst.i} (${IMPACT[worst.i]}) =
+   <b>${worst.l*worst.i}</b>, ${band(worst.l*worst.i).label.toLowerCase()} risk.
+   ${gaps.length?` To finish, ${gaps.join(" and ")}.`:" Everything is rated."}</div>
+  <div class="row" style="margin-top:14px">
+   <button class="btn" onclick="window.print()">Print</button>
+   <button class="btn" id="csvBtn">Export CSV</button></div>`}
+
+function wire(){
+ document.querySelectorAll("[data-scn]").forEach(b=>b.onclick=()=>{S.scenario=b.dataset.scn||null;save();renderPractice()});
+ const add=()=>{const el=$("#aName"),v=el.value.trim();if(!v)return;
+   S.assets.push({id:uid(),name:v,cat:$("#aCat").value,scores:{}});save();renderPractice();
+   const x=$("#aName");if(x)x.focus()};
+ if($("#addAsset"))$("#addAsset").onclick=add;
+ if($("#aName"))$("#aName").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();add()}};
+ document.querySelectorAll("[data-del-asset]").forEach(b=>b.onclick=()=>{
+   S.assets=S.assets.filter(a=>a.id!==b.dataset.delAsset);
+   S.risks=S.risks.filter(r=>r.assetId!==b.dataset.delAsset);save();renderPractice()});
+ document.querySelectorAll("[data-crit]:not([data-score])").forEach(el=>el.onchange=()=>{
+   const c=S.criteria.find(x=>x.id===el.dataset.crit);if(c)c.weight=+el.value||0;save();renderPractice()});
+ document.querySelectorAll("[data-score]").forEach(el=>el.onchange=()=>{
+   const a=S.assets.find(x=>x.id===el.dataset.score);if(!a)return;
+   a.scores=a.scores||{};a.scores[el.dataset.crit]=el.value===""?undefined:+el.value;save();renderPractice()});
+ if($("#addRisk"))$("#addRisk").onclick=()=>{
+   S.risks.push({id:uid(),assetId:$("#rAsset").value,threat:$("#rThreat").value,
+     vuln:$("#rVuln").value.trim(),ctrl:$("#rCtrl").value.trim(),l:null,i:null});save();renderPractice()};
+ document.querySelectorAll("[data-del-risk]").forEach(b=>b.onclick=()=>{
+   S.risks=S.risks.filter(r=>r.id!==b.dataset.delRisk);save();renderPractice()});
+ document.querySelectorAll("[data-set]").forEach(el=>el.onchange=()=>{
+   const r=S.risks.find(x=>x.id===el.dataset.id);if(!r)return;
+   r[el.dataset.set]=el.value?+el.value:null;save();renderPractice()});
+ ["sle","aro"].forEach(k=>{const el=$("#"+k);if(el)el.oninput=()=>{S[k]=el.value;save();
+   const q=el.closest(".body");if(q)q.innerHTML=quantHtml(),wire()}});
+ if($("#clearAll"))$("#clearAll").onclick=()=>{
+   S.assets=[];S.risks=[];S.criteria=DEFAULT_CRITERIA.map(c=>({...c}));save();renderPractice()};
+ if($("#csvBtn"))$("#csvBtn").onclick=csv;
+ document.querySelectorAll(".hint").forEach(b=>b.onclick=()=>goHint(b.dataset.go));
+}
+
+function csv(){
+ const head=["Asset","Category","Threat","Vulnerability","Existing control",
+   "Likelihood","Likelihood label","Impact","Impact label","Risk rating","Risk level"];
+ const rows=S.risks.map(r=>{const a=S.assets.find(x=>x.id===r.assetId);
+   const lvl=(r.l&&r.i)?r.l*r.i:"";
+   return [a?a.name:"",a?a.cat:"",r.threat,r.vuln,r.ctrl,r.l||"",r.l?LIKELIHOOD[r.l]:"",
+           r.i||"",r.i?IMPACT[r.i]:"",lvl,lvl?band(lvl).label:""]});
+ const out=[head,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\r\n");
+ const a=document.createElement("a");
+ a.href=URL.createObjectURL(new Blob(["﻿"+out],{type:"text/csv"}));
+ a.download="tva-risk-register.csv";a.click()}
+
+/* ─────────────────────────── study guide ──────────────────────────── */
+const GUIDE=[
+ ["sg-assets",1,"Identify the information assets","Chapter 2 — Risk identification",
+  `<p>Risk identification begins by listing the <b>information assets</b>. The course names six kinds:
+   <b>people, procedures, data and information, software, hardware</b> and <b>networking elements</b>.</p>
+   <p>Do this <b>without pre-judging the value</b> of each asset — values come later. If you decide what
+   matters while you are still listing, you will leave things out.</p>
+   <p>The commonest mistake is listing only equipment. A receptionist with no training is an asset
+   (people). "No written procedure for an outage" concerns an asset too (procedures).</p>`,
+  `Ask of each thing: if this were lost, stolen, changed, or seen by the wrong person, would it matter?`],
+ ["sg-weight",2,"Prioritise them — weighted factor analysis","Chapter 2 — Prioritising information assets",
+  `<p>Not every asset deserves equal attention, so rank them. The course uses a
+   <b>weighted factor analysis worksheet</b>:</p>
+   <p><b>1.</b> List the assets. <b>2.</b> Choose your criteria — the slides suggest confidentiality,
+   integrity, availability and legal impact. <b>3.</b> Give each criterion a weight, all adding up to 1.00.
+   <b>4.</b> Score every asset 0–5 against each criterion, where 0 is not applicable, 1 is not important
+   and 5 is critically important. <b>5.</b> Multiply score by weight and total them. <b>6.</b> Sort.</p>`,
+  `The weights are a judgement about what your organisation values. Two people can weight the same assets
+   differently and both be right — but they must say why.`],
+ ["sg-tva",3,"Map threats to assets — the TVA worksheet","Chapter 2 — Threat and vulnerability assessment",
+  `<p>A <b>threat</b> is a potential risk to an asset. An <b>attack</b> is it actually happening. A
+   <b>vulnerability</b> is the specific opportunity a threat agent can exploit.</p>
+   <p>Once assets and threats are both prioritised, you map one to the other. The result is the
+   <b>TVA worksheet</b> — Threats, Vulnerabilities, Assets — which lists, for each asset, the threats it
+   faces and the weakness each would use.</p>
+   <p>Then record the <b>existing controls</b>. You judge the risk after counting them, not before.</p>`,
+  `A threat with no matching vulnerability cannot hurt you. "Forces of nature" is only a risk to the server
+   if the server is somewhere a flood can reach it.`],
+ ["sg-rate",4,"Rate likelihood and impact","Chapter 3 — Formulating risk exposure",
+  `<p><b>Likelihood</b> is the probability that a threat successfully exploits a vulnerability, and how often
+   that might happen. The slides say it depends on the size of the threat universe, the attacker's
+   motivation, the skill required, and the <b>existing controls</b>.</p>
+   <p><b>Impact</b> — also called severity — is how much harm results. Rate it on the organisation, not on
+   you. A lost USB stick costs very little and could still be catastrophic.</p>
+   <p>Keep the two apart. Something can be severe and rare, or minor and constant, and those need different
+   answers.</p>`,
+  `Likelihood 1 Rare · 2 Unlikely · 3 Possible · 4 Likely · 5 Almost certain.<br>
+   Impact 1 Insignificant · 2 Minor · 3 Moderate · 4 Major · 5 Catastrophic.`],
+ ["sg-matrix",5,"Calculate the risk rating","Chapter 3 — Quantitative risk analysis",
+  `<p>The formula from the slides:</p>
+   <p style="font-size:17px"><b>Risk Rating = Likelihood × Impact</b></p>
+   <p>On a 5 × 5 matrix that gives a score from 1 to 25, and the course colours it:
+   <span class="lvl" style="background:#1c6f4d">Low &mdash; 6 or less</span>
+   <span class="lvl" style="background:#8a6a0a">Medium &mdash; 7 to 15</span>
+   <span class="lvl" style="background:#a8322a">High &mdash; more than 15</span></p>
+   <p>This is why separating the two ratings matters. Impact 5 with likelihood 1 scores 5 and is Low.
+   Impact 2 with likelihood 5 scores 10 and is Medium — the smaller problem outranks the bigger one because
+   it keeps happening.</p>`,
+  `The slides also give a fuller qualitative form: <b>Risk Exposure = Sensitivity × Severity × Likelihood</b>,
+   where sensitivity is how much the asset matters.`],
+ ["sg-quant",6,"Put a number on it","Chapter 3 — Simple quantitative risk calculation",
+  `<p>Qualitative rating tells you which risk to deal with first. Quantitative tells you what it costs, so
+   you can compare it against the price of a control.</p>
+   <p style="font-size:17px"><b>ALE = SLE × ARO</b></p>
+   <p><b>SLE</b>, Single Loss Expectancy, is what one occurrence costs. <b>ARO</b>, Annualised Rate of
+   Occurrence, is how many times a year you expect it. <b>ALE</b> is the annual expected loss.</p>
+   <p>Worked example from the slides: 9 laptops a year at AED 1,000 each gives ALE = 1,000 × 9 = AED 9,000.
+   Lose one every three years instead and ARO is 0.33, so ALE = AED 333.</p>`,
+  `If a control costs less per year than the ALE, it pays for itself. That single comparison is what makes
+   quantitative analysis worth the effort.`],
+ ["sg-summary",7,"Decide and record","Chapters 2 and 3",
+  `<p>At the end of risk identification you should have a <b>prioritised list of assets with their
+   vulnerabilities</b>, and a <b>prioritised list of threats</b> — combined in the TVA worksheet.</p>
+   <p>Write the risk descriptions for <b>non-technical managers</b>. The slides are explicit about this: use
+   clear, simple language and avoid jargon. A manager reading "Telnet is used and passwords never expire"
+   learns nothing. Tell them what could happen and what it would cost.</p>`,
+  `Qualitative or quantitative? The slides suggest a <b>hybrid</b>: qualitative to rank everything quickly,
+   quantitative on the few at the top where you need to justify spending.`]];
+
+function renderGuide(){
+ $("#guide").innerHTML=`<div class="panel"><h2 style="font-size:19px">How the method works</h2>
+   <p style="color:var(--muted);margin-top:6px">The process from CSF 4003 Chapters 1–3. Every
+   <b>? Hint</b> button in Practice brings you straight to the step you need.</p></div>
+   ${GUIDE.map(([id,n,t,c,b,k])=>`<div class="sgStep" id="${id}">
+     <div class="pHead"><div class="pNum">${n}</div><div class="pTitle"><h3>${t}</h3>
+       <div class="clause">${c}</div></div></div>${b}
+     <div class="keyline"><b>Worth remembering.</b> ${k}</div></div>`).join("")}
+   <div class="sgStep"><h3>The two qualitative scales</h3>
+     <div class="clause">Chapter 3 — slides 28 and 36</div>
+     <p><b>Severity of the vulnerability</b></p>
+     <div class="tWrap"><table><tbody>${SEVERITY_Q.map(([l,d])=>
+       `<tr><td style="width:96px"><b>${l}</b></td><td>${d}</td></tr>`).join("")}</tbody></table></div>
+     <p style="margin-top:16px"><b>Likelihood of the threat</b></p>
+     <div class="tWrap"><table><tbody>${LIKELIHOOD_Q.map(([l,d])=>
+       `<tr><td style="width:96px"><b>${l}</b></td><td>${d}</td></tr>`).join("")}</tbody></table></div>
+     <div class="keyline"><b>Worth remembering.</b> Both scales turn on the <b>existing controls</b>.
+       The same weakness is Moderate likelihood where controls impede it and High where they do not.</div></div>`}
+
+function goHint(id){setMode("guide");const el=document.getElementById(id);if(!el)return;
+ el.scrollIntoView({behavior:"smooth",block:"start"});
+ el.classList.remove("flash");void el.offsetWidth;el.classList.add("flash")}
+
+/* ─────────────────────────── shell ────────────────────────────────── */
+function setMode(m){$("#practice").hidden=m!=="practice";$("#guide").hidden=m!=="guide";
+ document.querySelectorAll(".modes button").forEach(b=>b.classList.toggle("on",b.dataset.mode===m));
+ try{localStorage.setItem("risklab4003-mode",m)}catch(e){}}
+function setTheme(d){document.body.classList.toggle("dark",d);
+ $("#themeBtn").textContent=d?"☀ Light":"☽ Dark";
+ try{localStorage.setItem("risklab4003-theme",d?"dark":"light")}catch(e){}}
+document.querySelectorAll(".modes button").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+$("#themeBtn").onclick=()=>setTheme(!document.body.classList.contains("dark"));
+$("#glossBtn").onclick=()=>$("#glass").classList.add("open");
+$("#glass").onclick=e=>{if(e.target.id==="glass")e.currentTarget.classList.remove("open")};
+document.addEventListener("keydown",e=>{if(e.key==="Escape")$("#glass").classList.remove("open")});
+renderGuide();renderPractice();
+(function(){let t="light",m="practice";
+ try{t=localStorage.getItem("risklab4003-theme")||"light";m=localStorage.getItem("risklab4003-mode")||"practice"}catch(e){}
+ setTheme(t==="dark");setMode(m)})();
+</script>
+</body>
+</html>
