@@ -101,13 +101,122 @@ table.reg tr:hover td{background:rgba(89,183,255,.06)}
 .agreeTrack{flex:1;height:9px;background:rgba(38,59,88,.6);border-radius:5px;overflow:hidden}
 .agreeTrack i{display:block;height:100%;background:var(--blue)}
 @media print{.stdTab{display:none}.stdTab.on{display:inline-block}}
+
+/* ---------- light theme: the default, because it is the friendlier one ---- */
+body.light{--bg:#f4f7fb;--panel:#ffffff;--panel2:#eaf1f8;--line:#d4dfec;
+  --ink:#16202c;--muted:#54657a;--blue:#12628f;--green:#1c6f4d;--amber:#8f5a0e;
+  --red:#a8322a;--purple:#5c46a0;
+  background:linear-gradient(180deg,#e9f0f8 0,#f4f7fb 320px)}
+body.light .card{background:#fff;border-color:var(--line);box-shadow:0 1px 2px rgba(20,40,70,.05)}
+body.light .stdKpi,body.light .metric,body.light .execKpi,body.light .simCell,body.light .simStat,
+body.light .sumCell{background:#f7fafd;border-color:var(--line)}
+body.light .stdTab{background:#eef4fa;color:#42566c}
+body.light .stdTab.on{background:var(--blue);color:#fff}
+body.light table.reg th,body.light th{background:#eef4fa;color:#54657a}
+body.light .rmCell.empty{background:#e8eef6;color:#8b9cb0}
+body.light .regWrap{border-color:var(--line)}
+body.light .notice{background:#fff8e8;border-color:#e6c986;color:#6d5316}
+body.light .banner.reject{background:#fdeceb;border-color:#e8a9a3}
+body.light .banner.approve{background:#e9f7f0;border-color:#9ad2b8}
+body.light .banner.conditional{background:#fdf5e4;border-color:#e6c986}
+body.light .foot{color:var(--muted)}
+
+/* ---------- mode switch ---------------------------------------------- */
+.modeBar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 16px}
+.modeBtns{display:flex;gap:4px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:10px;padding:4px}
+.modeBtn{background:none;border:0;color:var(--muted);font:700 13.5px/1 inherit;
+  padding:9px 16px;border-radius:7px;cursor:pointer}
+.modeBtn:hover{color:var(--ink)}
+.modeBtn.on{background:var(--blue);color:#08121f}
+body.light .modeBtn.on{color:#fff}
+.modeSpacer{flex:1}
+.iconBtn{background:var(--panel2);border:1px solid var(--line);color:var(--muted);
+  border-radius:9px;padding:9px 14px;font:700 13px/1 inherit;cursor:pointer}
+.iconBtn:hover{color:var(--ink)}
+/* guided mode shows only the walkthrough - enumerate nothing, so a dashboard section added later cannot leak through */
+body.mode-guided .shell>section:not(#guided):not(#landing){display:none}
+body.mode-guided .foot{display:none}
+body.mode-dash #guided{display:none}
+body.empty .modeBar{display:none}
+
+/* ---------- guided steps --------------------------------------------- */
+.gIntro{background:var(--panel);border:1px solid var(--line);border-radius:13px;
+  padding:20px 22px;margin-bottom:16px}
+.gIntro h2{margin:0 0 7px;font-size:21px;letter-spacing:-.01em}
+.gIntro p{margin:0 0 9px;color:var(--muted);font-size:14.5px;line-height:1.65;max-width:92ch}
+.gChain{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px}
+.gChain span{background:var(--panel2);border:1px solid var(--line);border-radius:7px;
+  padding:6px 11px;font-size:13px;font-weight:700;color:var(--muted)}
+.gChain span b{color:var(--blue)}
+
+.gStep{background:var(--panel);border:1px solid var(--line);border-radius:13px;
+  padding:20px 22px;margin-bottom:14px}
+.gHead{display:flex;align-items:flex-start;gap:14px;margin-bottom:12px}
+.gNum{flex:0 0 auto;width:38px;height:38px;border-radius:11px;background:var(--blue);
+  color:#08121f;display:flex;align-items:center;justify-content:center;font:800 17px/1 inherit}
+body.light .gNum{color:#fff}
+.gTitle h3{margin:0;font-size:18px;letter-spacing:-.01em}
+.gTitle .gStd{color:var(--muted);font-size:12.5px;margin-top:3px}
+.gWhat{background:var(--panel2);border-left:3px solid var(--blue);border-radius:9px;
+  padding:13px 16px;margin-bottom:14px}
+.gWhat b{display:block;margin-bottom:4px;font-size:13px;text-transform:uppercase;
+  letter-spacing:.7px;color:var(--blue)}
+.gWhat p{margin:0;font-size:14.5px;line-height:1.65;color:var(--ink)}
+.gWhat p+p{margin-top:8px}
+.gYours{margin-top:14px}
+.gYours>b{display:block;font-size:13px;text-transform:uppercase;letter-spacing:.7px;
+  color:var(--muted);margin-bottom:9px}
+.gFacts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.gFact{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.gFact small{display:block;color:var(--muted);font-size:13px;line-height:1.45}
+.gFact strong{display:block;font-size:22px;margin-bottom:3px}
+.gEg{margin-top:14px;background:var(--panel2);border:1px dashed var(--line);
+  border-radius:10px;padding:13px 16px;font-size:14px;line-height:1.7}
+.gEg b.egLabel{display:block;font-size:12.5px;text-transform:uppercase;letter-spacing:.7px;
+  color:var(--amber);margin-bottom:5px}
+.gScale{width:100%;border-collapse:collapse;margin-top:11px;font-size:14px;min-width:0}
+.gScale th{text-align:left;padding:8px 10px;background:var(--panel2);color:var(--muted);
+  font-size:12.5px;text-transform:uppercase;letter-spacing:.6px}
+.gScale td{padding:7px 10px;border-top:1px solid var(--line);vertical-align:top}
+.gScale td:first-child{width:52px;font-weight:800}
+.gDot{display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;
+  border-radius:8px;font-weight:800;color:#08121f}
+.gNext{margin-top:14px;padding-top:13px;border-top:1px solid var(--line);
+  color:var(--muted);font-size:13.5px;line-height:1.6}
+.gNext b{color:var(--ink)}
+
+/* ---------- glossary -------------------------------------------------- */
+.glossWrap{position:fixed;inset:0;background:rgba(5,12,22,.72);z-index:60;
+  display:none;align-items:flex-start;justify-content:center;padding:36px 18px;overflow:auto}
+.glossWrap.open{display:flex}
+.glossCard{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  max-width:760px;width:100%;padding:24px 26px}
+.glossCard h2{margin:0 0 4px;font-size:20px}
+.glossCard .gsub{color:var(--muted);font-size:13.5px;margin:0 0 16px}
+.glossList dt{font-weight:800;font-size:14.5px;margin-top:14px;color:var(--ink)}
+.glossList dd{margin:3px 0 0;color:var(--muted);font-size:14px;line-height:1.65}
+.glossClose{float:right;background:var(--panel2);border:1px solid var(--line);
+  color:var(--muted);border-radius:8px;padding:7px 13px;cursor:pointer;font:700 13px/1 inherit}
+@media(max-width:700px){.gFacts{grid-template-columns:1fr 1fr}.gIntro,.gStep{padding:16px}}
+@media print{.modeBar,.glossWrap{display:none}}
 </style>
 </head>
 <body>
 <main class="shell">
 <header class="top"><div><div class="eyebrow">Procurement intelligence · offline model</div><div class="brand">BOM<span style="color:var(--blue)">Shield</span></div><div class="subtitle">AI server supply-chain risk assessment before purchase. Scores are a prioritisation index, not a probability of compromise.</div></div><div class="actions"><label class="file">↥ Upload BOM CSV<input id="upload" type="file" accept=".csv,text/csv"></label><button onclick="window.print()">Print report</button></div></header>
 <div id="notice" class="notice" style="display:none"></div>
-<section id="landing"><div class="landingCard"><h2>Upload a bill of materials to begin</h2><p class="landingLead">BOMShield scores an AI server BOM for supply-chain risk <b>before purchase</b> and returns a procurement decision: approve, approve with conditions, or reject.</p><p class="landingNote">Your file is read entirely in this browser. Nothing is uploaded, stored or sent anywhere.</p><div class="landingBtns"><button id="pickFile" class="primary">&#8613; Upload BOM CSV</button><button id="loadDemo">Load the demo BOM</button></div><div class="landingCols"><div><h4>Required columns</h4><code>component_id, component_name, category, vendor, model, version, country_of_origin, quantity, end_of_life, lead_time_weeks, validated_alternative</code></div><div><h4>What you get</h4><ul><li>Five risk dimensions per component, each explained</li><li>CVE evidence with CVSS, KEV and EPSS</li><li>Components that cannot be identified, surfaced not hidden</li><li>A what-if simulator showing the smallest set of changes that makes the purchase acceptable</li></ul></div></div></div></section><section id="banner" class="banner"></section>
+<section id="landing"><div class="landingCard"><h2>Upload a bill of materials to begin</h2><p class="landingLead">BOMShield scores an AI server BOM for supply-chain risk <b>before purchase</b> and returns a procurement decision: approve, approve with conditions, or reject.</p><p class="landingNote">Your file is read entirely in this browser. Nothing is uploaded, stored or sent anywhere.</p><div class="landingBtns"><button id="pickFile" class="primary">&#8613; Upload BOM CSV</button><button id="loadDemo">Load the demo BOM</button></div><div class="landingCols"><div><h4>Required columns</h4><code>component_id, component_name, category, vendor, model, version, country_of_origin, quantity, end_of_life, lead_time_weeks, validated_alternative</code></div><div><h4>What you get</h4><ul><li>Five risk dimensions per component, each explained</li><li>CVE evidence with CVSS, KEV and EPSS</li><li>Components that cannot be identified, surfaced not hidden</li><li>A what-if simulator showing the smallest set of changes that makes the purchase acceptable</li></ul></div></div></div></section><section id="banner" class="banner"></section><div class="modeBar">
+  <div class="modeBtns">
+    <button class="modeBtn on" data-mode="guided">&#9673; Guided &mdash; learn the method</button>
+    <button class="modeBtn" data-mode="dash">&#9636; Dashboard &mdash; full detail</button>
+  </div>
+  <div class="modeSpacer"></div>
+  <button class="iconBtn" id="glossBtn">&#63; Glossary</button>
+  <button class="iconBtn" id="themeBtn">&#9789; Dark</button>
+</div>
+<section id="guided"></section>
+
 <section id="metrics" class="grid metrics"></section>
 <section class="executive">
   <div class="sectionTitle">Executive risk overview <span>same scored data, presented for quick review</span></div>
@@ -122,8 +231,8 @@ table.reg tr:hover td{background:rgba(89,183,255,.06)}
     <div class="execCard"><h3>Action plan breakdown</h3><div id="planBreakdown"></div></div>
   </div>
 </section>
-<section><div class="sectionTitle">Risk dimensions <span>weighted means across rated components</span></div><div id="dimensions" class="grid dimensionGrid"></div></section>
-<section class="grid two">
+<section id="dashOnly"><div class="sectionTitle">Risk dimensions <span>weighted means across rated components</span></div><div id="dimensions" class="grid dimensionGrid"></div></section>
+<section class="grid two" data-dash>
   <div class="card tableCard"><div class="tableHead"><div class="sectionTitle" style="margin:0">Component risk table <span id="rowCount"></span></div><div class="filters"><input id="search" placeholder="Search name, vendor, model, CVE…"><select id="band"><option value="">All bands</option><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option><option>UNKNOWN</option></select><select id="category"><option value="">All categories</option></select><label class="check"><input id="actionable" type="checkbox"> Actionable only</label><button id="clear">Clear</button></div></div><div class="scroll"><table><thead><tr><th data-sort="component_name">Component ↕</th><th data-sort="category">Category ↕</th><th data-sort="vendor">Vendor ↕</th><th data-sort="vulnerability">Vuln ↕</th><th data-sort="policy">Policy ↕</th><th data-sort="geopolitical">Geo ↕</th><th data-sort="operational">Ops ↕</th><th data-sort="score">Overall ↕</th><th>Band</th></tr></thead><tbody id="rows"></tbody></table></div></div>
   <aside class="side"><div class="card"><div class="sectionTitle">Priority findings <span>top 4</span></div><div id="findings"></div></div><div class="card"><div class="sectionTitle">Data confidence</div><div id="confidence"></div></div></aside>
 </section>
@@ -156,6 +265,38 @@ table.reg tr:hover td{background:rgba(89,183,255,.06)}
     <button id="printSum">Print</button>
   </div>
 </section>
+<div class="glossWrap" id="glossWrap"><div class="glossCard">
+  <button class="glossClose" onclick="document.querySelector('#glossWrap').classList.remove('open')">Close</button>
+  <h2>Glossary</h2>
+  <p class="gsub">Every term this tool uses, in one line each.</p>
+  <dl class="glossList">
+  <dt>Asset</dt><dd>Anything worth protecting. Here, every physical part in the server is an asset.</dd>
+  <dt>BOM (bill of materials)</dt><dd>The parts list for a machine &mdash; every component, who made it, which version, and where it came from.</dd>
+  <dt>Threat</dt><dd>Something that could cause harm, such as an attacker exploiting a flaw, or a supplier failing to deliver.</dd>
+  <dt>Vulnerability</dt><dd>The weakness a threat would use. A threat without a matching vulnerability cannot do anything.</dd>
+  <dt>Existing control</dt><dd>A protection you already have in place. You judge risk <i>after</i> counting these.</dd>
+  <dt>Likelihood</dt><dd>How probable the risk is, rated 1&ndash;5. This tool derives it from published data rather than opinion.</dd>
+  <dt>Impact</dt><dd>How bad it would be if it happened, rated 1&ndash;5. Driven by how important the part is.</dd>
+  <dt>Risk level</dt><dd>Likelihood &times; Impact, so 1 to 25. Higher means deal with it sooner.</dd>
+  <dt>Inherent risk</dt><dd>The risk level before you do anything new about it.</dd>
+  <dt>Residual risk</dt><dd>The risk left over after a treatment is carried out. It is rarely zero.</dd>
+  <dt>Risk treatment</dt><dd>What you decide to do. ISO 27005 gives four options: Modify, Avoid, Share, Retain.</dd>
+  <dt>CVE</dt><dd>A publicly catalogued security flaw in a specific product, with an ID like CVE-2024-25943.</dd>
+  <dt>CVSS</dt><dd>A 0&ndash;10 score for how severe a CVE is. It says how bad exploitation would be, not how likely.</dd>
+  <dt>EPSS</dt><dd>A published estimate of how likely a CVE is to actually be exploited. This is the likelihood half.</dd>
+  <dt>CISA KEV</dt><dd>A public list of flaws already being exploited in the real world. Being on it is an observation, not a prediction.</dd>
+  <dt>Firmware</dt><dd>Software built into a hardware part. It survives reinstalling the operating system, which is why it matters so much.</dd>
+  <dt>BMC</dt><dd>Baseboard management controller &mdash; a small computer inside the server with total control over it, even when the server is off.</dd>
+  <dt>End of life (EOL)</dt><dd>The supplier has stopped supporting the part, so no future security fixes will be issued for it.</dd>
+  <dt>Single source</dt><dd>Only one supplier makes the part, so if they fail you have no alternative.</dd>
+  <dt>Country of origin</dt><dd>Where a part was made. Some organisations restrict or review certain origins as policy.</dd>
+  <dt>Restricted vendor</dt><dd>A supplier your organisation's policy forbids buying from. This is a compliance rule, not a judgement call.</dd>
+  <dt>NOT SCORED</dt><dd>A part that cannot be identified, so it cannot be assessed. It is never treated as safe.</dd>
+  <dt>ISO/IEC 27005</dt><dd>The international standard for managing information security risk.</dd>
+  <dt>NIST SP 800-30</dt><dd>The US guide for conducting a risk assessment, step by step.</dd>
+  <dt>OCTAVE</dt><dd>A risk method that starts from assets and what the organisation cares about.</dd>
+  <dt>FAIR</dt><dd>A method that puts risk in money terms: how often a loss happens, times how much it costs.</dd>
+  </dl></div></div>
 <div class="foot">BOMShield applies the attached local CVE and policy files. No network requests, login, database, or telemetry are used.</div>
 </main>
 
@@ -267,7 +408,7 @@ let types=["PATCH","REPLACE","REFRESH","QUALIFY","IDENTIFY"],pcols=["#287db1","#
 function render(){if(!bom.length){document.body.classList.add('empty');document.body.classList.remove('tuned');document.querySelector('#tuner')?.classList.remove('open');return}document.body.classList.remove('empty');let a=aggregate(bom);results=a.rr;document.body.dataset.verdict=a.verdict;let bc=a.verdict=="REJECT"?"reject":a.verdict=="APPROVE"?"approve":"conditional";let banner=document.querySelector("#banner");banner.className=`banner ${bc}`;banner.innerHTML=`<div><div class="eyebrow">Procurement decision</div><div class="verdict">${a.verdict}</div><div class="reason">${a.reason}</div></div><div class="bannerScore"><div class="muted">Overall risk index</div><div class="bigscore">${round(a.overall)} <small>/ 100</small></div></div>`;
 document.querySelector("#metrics").innerHTML=[["Overall risk",round(a.overall)],["Normalised",round(a.overall/100).toFixed(2)],["Worst",a.worst?round(a.worst):"—"],["Components",bom.length],["Critical",a.critical.length],["High",results.filter(x=>x.band=="HIGH").length],["Not scored",bom.length-a.rated.length],["Data confidence",pct(a.coverage)]].map(x=>`<div class="metric"><small>${x[0]}</small><strong class="${String(x[1]).length>8?"tiny":""}">${x[1]}</strong></div>`).join("");
 let keys=["vulnerability","policy","lifecycle","geopolitical","operational"],names={vulnerability:"Vulnerability",policy:"Vendor / policy",lifecycle:"Lifecycle",geopolitical:"Geopolitical",operational:"Operational"};document.querySelector("#dimensions").innerHTML=keys.map(k=>{let r=results.filter(x=>x.id),v=r.length?r.reduce((s,x)=>s+x.dims[k],0)/r.length:0;return `<div class="card"><span class="dimName">${names[k]}</span><span class="dimScore">${round(v)}</span><div class="bar"><i style="width:${v}%"></i></div><div class="dimReason">Weight ${(WEIGHTS[k]*100).toFixed(0)}% · mean across ${r.length} rated items</div></div>`}).join("");
-let cats=[...new Set(bom.map(x=>x.category))].sort();document.querySelector("#category").innerHTML='<option value="">All categories</option>'+cats.map(x=>`<option>${esc(x)}</option>`).join("");renderTable();renderFindings(a);renderConfidence(a);renderGeo(a);renderOps(a);renderMatrix(a);buildActions();renderExecutive(a);renderActions();renderSim();if(!isTuned()) BASELINE=a;if(typeof syncTuner==='function') syncTuner();if(typeof renderTuneDelta==='function') renderTuneDelta(a);if(typeof renderSummary==='function') renderSummary(a);if(typeof renderStandards==='function') renderStandards();
+let cats=[...new Set(bom.map(x=>x.category))].sort();document.querySelector("#category").innerHTML='<option value="">All categories</option>'+cats.map(x=>`<option>${esc(x)}</option>`).join("");renderTable();renderFindings(a);renderConfidence(a);renderGeo(a);renderOps(a);renderMatrix(a);buildActions();renderExecutive(a);renderActions();renderSim();if(!isTuned()) BASELINE=a;if(typeof syncTuner==='function') syncTuner();if(typeof renderTuneDelta==='function') renderTuneDelta(a);if(typeof renderSummary==='function') renderSummary(a);if(typeof renderStandards==='function') renderStandards();if(typeof renderGuided==='function') renderGuided(a);
 }
 /* ===================================================================
    Standards alignment - CSF 4003.
@@ -491,6 +632,223 @@ document.querySelectorAll(".stdTab").forEach(b=>b.onclick=()=>{
   document.querySelectorAll(".stdTab").forEach(t=>t.classList.toggle("on",t===b));
   renderStandards();
 });
+
+/* ===================================================================
+   Guided mode - the ISO 27005 / NIST SP 800-30 chain, one step at a
+   time, in plain language, using the student's own numbers.
+   =================================================================== */
+function gFact(v,l){return `<div class="gFact"><strong>${v}</strong><small>${l}</small></div>`}
+function gDot(n,band){return `<span class="gDot" style="background:${STD_BAND_COLOUR[band]}">${n}</span>`}
+
+function renderGuided(a){
+  const host=document.querySelector("#guided"); if(!host||!bom.length) return;
+  const reg=stdRegister();
+  const worst=reg[0];
+  const cats={}; bom.forEach(c=>cats[c.category]=(cats[c.category]||0)+1);
+  const catList=Object.entries(cats).sort((x,y)=>y[1]-x[1]);
+  const scen={}; reg.forEach(r=>scen[r.scenario]=(scen[r.scenario]||0)+1);
+  const unknown=results.filter(x=>!x.id).length;
+  const bandsOf=k=>{let o={};reg.forEach(r=>{let b=k=="res"?r.resBand:r.band;o[b]=(o[b]||0)+1});return o};
+  const inh=bandsOf(), res=bandsOf("res");
+  const meanL=reg.reduce((s,r)=>s+r.level,0)/reg.length;
+  const meanR=reg.reduce((s,r)=>s+r.resLevel,0)/reg.length;
+  const lDist=[1,2,3,4,5].map(n=>reg.filter(r=>r.l==n).length);
+  const iDist=[1,2,3,4,5].map(n=>reg.filter(r=>r.i==n).length);
+  const kev=results.some(x=>x.matches.some(v=>low(v.kev)=="yes"));
+
+  const step=(n,title,std,what,yours,next)=>`
+   <div class="gStep">
+     <div class="gHead"><div class="gNum">${n}</div>
+       <div class="gTitle"><h3>${title}</h3><div class="gStd">${std}</div></div></div>
+     <div class="gWhat"><b>What this step means</b>${what}</div>
+     ${yours?`<div class="gYours"><b>In your assessment</b>${yours}</div>`:""}
+     ${next?`<div class="gNext">${next}</div>`:""}
+   </div>`;
+
+  host.innerHTML = `
+  <div class="gIntro">
+    <h2>Assessing this purchase, step by step</h2>
+    <p>A risk assessment is not one number. It is a chain of questions, each answered before the next.
+    This mode walks you through that chain using <b>your own bill of materials</b>, and explains every
+    term as it comes up. If a word is unfamiliar, the <b>Glossary</b> button at the top defines all of them.</p>
+    <p>The chain below is the one set out in <b>ISO/IEC 27005</b> and <b>NIST SP 800-30</b>:</p>
+    <div class="gChain">
+      <span><b>1</b> Assets</span><span><b>2</b> Threats &amp; weaknesses</span>
+      <span><b>3</b> Existing controls</span><span><b>4</b> Likelihood</span><span><b>5</b> Impact</span>
+      <span><b>6</b> Risk level</span><span><b>7</b> Treatment</span><span><b>8</b> Residual risk</span>
+      <span><b>9</b> The decision</span>
+    </div>
+  </div>
+
+  ${step(1,"Identify the assets","ISO/IEC 27005 clause 8.2.2 &middot; NIST SP 800-30 step 2 &middot; OCTAVE asset profile",
+    `<p>An <b>asset</b> is anything worth protecting. In most risk assessments the assets are systems or
+     databases. Here they are physical parts, because you are assessing a machine before you buy it.</p>
+     <p>You cannot assess what you have not listed. That is why this step comes first.</p>`,
+    `<div class="gFacts">${gFact(bom.length,"parts in your bill of materials")}
+      ${gFact(catList.length,"different kinds of part")}
+      ${gFact(unknown,"parts that cannot be identified")}</div>
+     <div class="gEg"><b class="egLabel">Your largest groups</b>
+      ${catList.slice(0,5).map(([k,v])=>`<b>${v}</b> &times; ${esc(k)}`).join(" &nbsp;&middot;&nbsp; ")}</div>`,
+    unknown?`<b>Note the ${unknown} parts you cannot identify.</b> They are not ignored and they are not
+      assumed safe &mdash; each becomes its own risk in step 2. Not knowing is itself a finding.`
+     :`Every part here is identifiable, so all of them can be assessed.`)}
+
+  ${step(2,"Identify the threats and the weaknesses they use","ISO/IEC 27005 clause 8.2 &middot; NIST SP 800-30 step 2",
+    `<p>A <b>threat</b> is something that could cause harm. A <b>vulnerability</b> is the weakness it would
+     use. They only matter as a pair: a threat with no matching weakness cannot do anything, and a weakness
+     nothing threatens is not urgent.</p>
+     <p>This tool looks for five kinds of pairing, which is why your report has five dimensions.</p>`,
+    `<table class="gScale"><tr><th>Threat</th><th>The weakness it uses</th><th>Found</th></tr>
+     <tr><td style="width:auto;font-weight:700">Attacker exploits a flaw</td><td>Firmware with a published CVE</td><td>${scen.vulnerability||0}</td></tr>
+     <tr><td style="width:auto;font-weight:700">Buying from a banned supplier</td><td>Vendor is on the restricted list</td><td>${scen.policy||0}</td></tr>
+     <tr><td style="width:auto;font-weight:700">A flaw appears after support ends</td><td>Part is end of life, so no fix will come</td><td>${scen.lifecycle||0}</td></tr>
+     <tr><td style="width:auto;font-weight:700">Supply is cut off or unverifiable</td><td>Origin undeclared or higher-risk</td><td>${scen.geopolitical||0}</td></tr>
+     <tr><td style="width:auto;font-weight:700">Part cannot be replaced in time</td><td>Only one supplier, or a long wait</td><td>${scen.operational||0}</td></tr>
+     ${scen.unidentified?`<tr><td style="width:auto;font-weight:700">Cannot assess it at all</td><td>Vendor, model or version missing</td><td>${scen.unidentified}</td></tr>`:""}
+     </table>`,
+    `That gives <b>${reg.length} separate risks</b> to judge. One part can carry several &mdash; a controller can
+     be both vulnerable and end of life, and those are two different problems with two different fixes.`)}
+
+  ${step(3,"Record what already protects you","ISO/IEC 27005 clause 8.2 &middot; NIST SP 800-30 task 2-3",
+    `<p>An <b>existing control</b> is a protection you already have. You judge risk <i>after</i> counting these,
+     not before &mdash; otherwise every risk looks worse than it is.</p>
+     <p>These are the controls this assessment assumes are already in place. If your organisation does not
+     actually have one of them, the real likelihood is higher than shown.</p>`,
+    `<table class="gScale"><tr><th>Against</th><th>Existing control assumed</th></tr>
+     <tr><td style="width:auto">Known flaws</td><td>Vendor patching process; management interfaces kept off the main network</td></tr>
+     <tr><td style="width:auto">Banned suppliers</td><td>Procurement policy and an approved-supplier list</td></tr>
+     <tr><td style="width:auto">End of life</td><td>Asset register and a planned refresh cycle</td></tr>
+     <tr><td style="width:auto">Origin risk</td><td>Supplier due diligence; origin must be declared</td></tr>
+     <tr><td style="width:auto">Supply failure</td><td>Second-source qualification; buffer stock</td></tr></table>`,
+    `<b>Be honest here.</b> Listing a control you do not really have is the most common way a risk register
+     ends up flattering itself.`)}
+
+  ${step(4,"Rate how likely each risk is","ISO/IEC 27005 clause 8.2.5 &middot; NIST SP 800-30 task 2-4 &middot; FAIR: Loss Event Frequency",
+    `<p><b>Likelihood</b> is how probable the risk is, on a scale of 1 to 5. Most student risk registers guess
+     this. This tool does not &mdash; it uses published data.</p>
+     <p>For a security flaw it uses <b>EPSS</b>, a public estimate of how likely that specific flaw is to be
+     exploited, and <b>CISA KEV</b>, a public list of flaws already being exploited right now. Being on KEV
+     is not a prediction, it is an observation, so it goes straight to 5.</p>
+     <p>Watch out for the trap here: a <b>severe</b> flaw is not the same as a <b>likely</b> one. Severity is
+     the next step, not this one.</p>`,
+    `<table class="gScale"><tr><th></th><th>Means</th><th>Yours</th></tr>
+     ${[[1,"Very unlikely right now"],[2,"Unlikely"],[3,"Possible"],[4,"Likely"],[5,"Near certain, or already happening"]]
+      .map(([n,t])=>`<tr><td>${gDot(n,stdBand(n*5))}</td><td>${t}</td><td>${lDist[n-1]} risk${lDist[n-1]==1?"":"s"}</td></tr>`).join("")}
+     </table>
+     <div class="gEg"><b class="egLabel">Not everything is a guess</b>
+     Some risks are rated 5 because they are simply <b>true today</b>. A part from a banned supplier is not
+     "likely" &mdash; it is already in your parts list, so the compliance breach is certain until you swap it.
+     ${kev?"One of your flaws is on the CISA KEV list, so it is rated 5 on observed fact.":"None of your flaws are on the CISA KEV list, so none are rated 5 on observed exploitation."}</div>`,
+    `Likelihood answers <b>"how often?"</b>. It says nothing about how bad it would be. That is step 5.`)}
+
+  ${step(5,"Rate how bad it would be","ISO/IEC 27005 clause 8.2.4 &middot; NIST SP 800-30 task 2-5 &middot; FAIR: Loss Magnitude",
+    `<p><b>Impact</b> is how much damage the risk would do, on a scale of 1 to 5. It depends on two things:
+     how severe the flaw is (<b>CVSS</b>, a 0&ndash;10 severity score) and, more importantly, <b>what the part
+     actually does</b>.</p>
+     <p>That second part is why a <b>BMC</b> scores 5 and a fan scores 2. A BMC is a small computer inside the
+     server with total control over it &mdash; it keeps working when the server is switched off, and it survives
+     reinstalling the operating system. A compromised fan is a bad day; a compromised BMC is someone else
+     owning the machine.</p>`,
+    `<table class="gScale"><tr><th></th><th>Kind of part</th><th>Yours</th></tr>
+     ${[[5,"Management controller, firmware &mdash; controls the whole machine"],
+        [4,"CPU, GPU, network card &mdash; core function"],
+        [3,"Storage, memory, general parts"],
+        [2,"Power supply, cooling &mdash; supporting parts"],
+        [1,"Minimal consequence"]]
+      .map(([n,t])=>`<tr><td>${gDot(n,stdBand(n*5))}</td><td>${t}</td><td>${iDist[n-1]} risk${iDist[n-1]==1?"":"s"}</td></tr>`).join("")}
+     </table>`,
+    `Impact is a property of the <b>asset</b>, not of the attacker. Remember that &mdash; it explains something
+     surprising in step 8.`)}
+
+  ${step(6,"Work out the risk level","ISO/IEC 27005 clause 8.2.6 &middot; NIST SP 800-30 task 2-6",
+    `<p>Now multiply them. <b>Risk = Likelihood &times; Impact</b>, so every risk lands between 1 and 25.</p>
+     <p>This is the whole point of separating them. A severe flaw nobody is exploiting (impact 5, likelihood 1)
+     scores 5. A minor problem that is certain (impact 2, likelihood 5) scores 10 &mdash; and deserves your
+     attention first, which is not what instinct says.</p>`,
+    `<div class="gFacts">${gFact(reg.length,"risks assessed")}
+      ${gFact((inh["VERY HIGH"]||0)+(inh["HIGH"]||0),"rated high or very high")}
+      ${gFact(round(meanL),"average level, out of 25")}
+      ${gFact(worst.level,"your highest single risk")}</div>
+     <table class="gScale" style="margin-top:12px"><tr><th>Level</th><th>Band</th><th>Yours</th></tr>
+     ${[["20-25","VERY HIGH"],["15-19","HIGH"],["10-14","MODERATE"],["5-9","LOW"],["1-4","VERY LOW"]]
+       .map(([r,b])=>`<tr><td><span class="gDot" style="background:${STD_BAND_COLOUR[b]};width:auto;padding:0 8px">${r}</span></td>
+       <td>${b}</td><td>${inh[b]||0} risk${(inh[b]||0)==1?"":"s"}</td></tr>`).join("")}</table>
+     <div class="gEg"><b class="egLabel">Your highest risk, worked through</b>
+      <b>${esc(worst.asset)}</b> (${esc(worst.id)})<br>
+      Threat: ${esc(worst.threat)}<br>
+      Likelihood <b>${worst.l}</b> &mdash; ${esc(worst.lWhy)}<br>
+      Impact <b>${worst.i}</b> &mdash; ${esc(worst.iWhy)}<br>
+      Risk = ${worst.l} &times; ${worst.i} = <b>${worst.level}</b> (${worst.band})</div>`,
+    `Open the <b>Dashboard</b> tab and the <b>5 &times; 5 matrix</b> to see all ${reg.length} plotted on a grid.`)}
+
+  ${step(7,"Decide what to do about each one","ISO/IEC 27005 clause 9 &middot; NIST SP 800-30 step 4",
+    `<p>A risk assessment that stops at a number is unfinished. <b>ISO 27005 gives four choices</b>, and you
+     must pick one for every risk:</p>
+     <p><b>Modify</b> &mdash; reduce it, by patching or adding a control. <b>Avoid</b> &mdash; remove the cause
+     entirely, such as buying from a different supplier. <b>Share</b> &mdash; transfer some of it, through
+     insurance or a contract. <b>Retain</b> &mdash; accept it knowingly, and write down that you did.</p>
+     <p>Retain is a legitimate answer. Accepting a risk on purpose is not the same as missing it.</p>`,
+    `<table class="gScale"><tr><th>Choice</th><th>What it looks like here</th><th>Yours</th></tr>
+     <tr><td style="width:auto;font-weight:700">Modify</td><td>Apply the vendor's fix, verify the origin, qualify a second supplier</td><td>${reg.filter(r=>r.option=="Modify").length}</td></tr>
+     <tr><td style="width:auto;font-weight:700">Avoid</td><td>Re-source the part from an approved supplier</td><td>${reg.filter(r=>r.option=="Avoid").length}</td></tr>
+     <tr><td style="width:auto;font-weight:700">Share</td><td>Contractual warranty or supply guarantee</td><td>0</td></tr>
+     <tr><td style="width:auto;font-weight:700">Retain</td><td>Accept and record, for the low-rated risks</td><td>${(inh["LOW"]||0)+(inh["VERY LOW"]||0)}</td></tr>
+     </table>`,
+    `The <b>Dashboard</b> tab has a what-if simulator that recalculates the whole assessment as you select actions.`)}
+
+  ${step(8,"Work out what is left over","ISO/IEC 27005 clause 9.2 &middot; residual risk and acceptance",
+    `<p><b>Residual risk</b> is what remains after your treatment is done. It is almost never zero, and a
+     register claiming otherwise is not believable.</p>
+     <p>Here is the part that surprises people, and it is worth understanding properly: <b>controls reduce
+     likelihood, not impact</b>. Patching the firmware makes an attack less likely. It does not make that
+     management controller any less critical to the machine &mdash; the part still does exactly what it did before.</p>
+     <p>So on the risk matrix, treatment moves your risks <b>left</b>, not <b>down</b>. The only thing that lowers
+     impact is removing the asset, which is what Avoid does.</p>`,
+    `<div class="gFacts">${gFact(round(meanL),"average risk now")}
+      ${gFact(round(meanR),"average after treatment")}
+      ${gFact(meanL?pct((meanL-meanR)/meanL):"n/a","reduction")}
+      ${gFact((res["VERY HIGH"]||0)+(res["HIGH"]||0),"still high afterwards")}</div>`,
+    `<b>Why this matters for marks:</b> a register where treatment magically drops impact is the commonest
+     error in student work. Yours does not do that, and you can say why.`)}
+
+  ${step(9,"State the decision","ISO/IEC 27005 clause 8.3 &middot; risk evaluation against criteria",
+    `<p>Finally, compare the result against the rule you set in advance &mdash; your <b>risk acceptance
+     criteria</b>. Deciding the threshold beforehand is what stops the assessment being argued backwards
+     from the answer you wanted.</p>
+     <p>The rule here: any part from a banned supplier is an automatic reject; any critical part, or
+     identifying fewer than 90% of parts, means approve only with conditions.</p>`,
+    `<div class="gFacts">${gFact(a.verdict,"the decision")}
+      ${gFact(round(a.overall),"overall risk index, of 100")}
+      ${gFact(pct(a.coverage),"of parts identified")}</div>
+     <div class="gEg"><b class="egLabel">Why</b>${esc(a.reason)}</div>`,
+    `That is the full chain. Switch to <b>Dashboard</b> for every component, the CVE evidence, the 5 &times; 5
+     matrix, the FAIR view in money, and the what-if simulator.`)}
+  `;
+}
+
+/* ---------- mode, theme, glossary ------------------------------------ */
+function setMode(m){
+  document.body.classList.toggle("mode-guided",m=="guided");
+  document.body.classList.toggle("mode-dash",m=="dash");
+  document.querySelectorAll(".modeBtn").forEach(b=>b.classList.toggle("on",b.dataset.mode==m));
+  try{localStorage.setItem("bomshield-mode",m)}catch(e){}
+}
+function setTheme(light){
+  document.body.classList.toggle("light",light);
+  let b=document.querySelector("#themeBtn"); if(b) b.innerHTML=light?"&#9789; Dark":"&#9788; Light";
+  try{localStorage.setItem("bomshield-theme",light?"light":"dark")}catch(e){}
+}
+document.querySelectorAll(".modeBtn").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+document.querySelector("#themeBtn").onclick=()=>setTheme(!document.body.classList.contains("light"));
+document.querySelector("#glossBtn").onclick=()=>document.querySelector("#glossWrap").classList.add("open");
+document.querySelector("#glossWrap").onclick=e=>{if(e.target.id=="glossWrap")e.currentTarget.classList.remove("open")};
+document.addEventListener("keydown",e=>{if(e.key=="Escape")document.querySelector("#glossWrap")?.classList.remove("open")});
+(function(){
+  let t="dark",m="guided";
+  try{t=localStorage.getItem("bomshield-theme")||"light";m=localStorage.getItem("bomshield-mode")||"guided"}
+  catch(e){t="light"}
+  setTheme(t!="dark"); setMode(m);
+})();
 
 function filtered(){let q=low(document.querySelector("#search").value),b=document.querySelector("#band").value,cat=document.querySelector("#category").value,act=document.querySelector("#actionable").checked;return results.filter(x=>{let hay=low([x.c.component_id,x.c.component_name,x.c.vendor,x.c.model,x.cveText].join(" "));return(!q||hay.includes(q))&&(!b||x.band==b)&&(!cat||x.c.category==cat)&&(!act||["CRITICAL","HIGH","UNKNOWN"].includes(x.band)||x.blocked)}).sort((x,y)=>{let ax=x[sortKey]??x.c[sortKey]??0,ay=y[sortKey]??y.c[sortKey]??0;return typeof ax=="number"?(ax-ay)*sortDir:String(ax).localeCompare(String(ay))*sortDir})}
 function renderTable(){let f=filtered();document.querySelector("#rowCount").textContent=`${f.length} of ${bom.length}`;document.querySelector("#rows").innerHTML=f.map(x=>`<tr onclick="openDetail('${esc(x.c.component_id)}')"><td><b>${esc(x.c.component_name)}</b><br><span class="muted">${esc(x.c.component_id)}</span></td><td>${esc(x.c.category)}</td><td>${esc(x.c.vendor)} ${x.blocked?pill("HIGH"):""}</td><td>${x.id?round(x.dims.vulnerability):"—"}</td><td>${x.id?round(x.dims.policy):"—"}</td><td>${x.id?round(x.dims.geopolitical):"—"}</td><td>${x.id?round(x.dims.operational):"—"}</td><td class="scoreCell">${x.id?round(x.score):"—"}</td><td>${pill(x.band)}</td></tr>`).join("")||`<tr><td colspan="9" class="empty">No components match the current filters.</td></tr>`}
